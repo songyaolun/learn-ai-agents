@@ -2,3 +2,10 @@
 __pycache__/
 *.pyc
 .DS_Store
+
+# chainlit 运行时产物 (本地文件存储 / 数据库)
+.files/
+chainlit.db
+
+# langgraph sqlite checkpoint (langgraph/persistence.py 生成)
+langgraph_checkpoints.db

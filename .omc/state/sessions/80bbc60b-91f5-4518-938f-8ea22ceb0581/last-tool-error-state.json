@@ -1,0 +1,7 @@
+{
+  "tool_name": "mcp__chrome-devtools__upload_file",
+  "tool_input_preview": "{\"uid\":\"1_8\",\"filePath\":\"/Users/bytedance/Documents/git_repo/learn-ai-agents/.test-assets/vision-test.png\",\"includeSnapshot\":true}",
+  "error": "Error: Failed to upload file. The element could not accept the file directly, and clicking it did not trigger a file chooser.",
+  "timestamp": "2026-07-07T11:28:38.238Z",
+  "retry_count": 1
+}
