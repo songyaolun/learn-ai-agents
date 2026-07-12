@@ -30,8 +30,18 @@ def get_weather(city: str) -> str:
     return f"It's always sunny in {city}!"
 
 
-# create_deep_agent 在 create_agent 之上叠加 harness 层:
-# 同样的 model + tools + system_prompt, 但多出 subagents (可委派子任务)
+# create_deep_agent 和 langchain 的 create_agent 用法几乎一样 (同样是 model + tools +
+# system_prompt), 但它在背后自动做了几件 create_agent 不会做的事:
+#   1. 自动给 agent 塞一个 todo 规划工具 (类似 claude-code/ch03.py 里手写的 TodoManager),
+#      面对复杂任务时先拆解成步骤再执行, 而不是想到哪做到哪
+#   2. 自动塞一整套虚拟文件系统工具 (ls/read_file/write_file/edit_file 等), 让 agent
+#      能把中间结果存成"文件"而不是全塞进对话历史 (见 deepagents/filesystem.py)
+#   3. 支持 subagents 参数: 可以把某一类子任务"外包"给一个独立的子 agent 去做
+#
+# subagents 里配置的 researcher 就是一个子 agent: 主 agent 遇到需要研究的问题时,
+# 会调用一个内置的 task 工具, 把任务描述发给 researcher 去独立完成, 只把 researcher
+# 的最终总结带回主对话 —— researcher 内部具体调用了几次工具、想了多久, 对主 agent
+# 的上下文都是不可见的 (这样主 agent 的上下文不会被子任务的中间过程撑爆)。
 agent = create_deep_agent(
     model=model,
     tools=[get_weather],
@@ -62,4 +72,6 @@ if __name__ == "__main__":
             ]
         }
     )
-    print(result["messages"][-1].content)
+    # 用 .text 而不是 .content: 开启 extended thinking 的模型返回的 .content 是
+    # thinking/text 混合的 block 列表, .text 只取出其中的纯文本部分。
+    print(result["messages"][-1].text)

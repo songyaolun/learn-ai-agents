@@ -19,9 +19,14 @@ model = ChatAnthropic(
     base_url=os.getenv("ANTHROPIC_BASE_URL") or None,
 )
 
-# DuckDuckGo 搜索工具, 无需 API key
+# DuckDuckGoSearchRun 是 langchain_community 提供的现成工具: 直接调用 DuckDuckGo 的
+# 搜索接口, 不需要申请任何 API key, 拿到的是真实的网络搜索结果 (不是模型编出来的)。
+# 跟 get_weather 一样, 它之所以能被模型调用, 也是因为自带了描述信息 (工具名/参数/用途)。
 search = DuckDuckGoSearchRun()
 
+# 这里没有额外传自定义工具, 只给了 search 一个工具, 但 create_deep_agent 仍然会自动
+# 附带 todo 规划工具 + 虚拟文件系统工具 (跟 quickstart.py 一样), 只是这里的例子没有
+# 特意在 system_prompt 里要求用文件, 所以不一定每次都会用到 write_file。
 agent = create_deep_agent(
     model=model,
     tools=[search],
@@ -30,6 +35,8 @@ agent = create_deep_agent(
         "information. Plan your research, search multiple queries if needed, then "
         "synthesize a clear answer with sources."
     ),
+    # researcher 子 agent 也拿不到额外工具, 但因为它是独立跑的一整个 agent, 遇到需要
+    # 搜索的问题时同样会调用 search (子 agent 会继承主 agent 提供的工具集)。
     subagents=[
         {
             "name": "researcher",
@@ -41,6 +48,9 @@ agent = create_deep_agent(
 
 
 if __name__ == "__main__":
+    # 这是一个典型的"需要多步骤才能回答好"的问题: 既要搜索最新资料, 又要综合整理成
+    # 一份总结。DeepAgents 的价值就体现在这种任务上——先用 todo 规划要查哪几个方面,
+    # 再一步步搜索 (可能还会委派给 researcher 子 agent 分头查), 最后再汇总成答案。
     result = agent.invoke(
         {
             "messages": [
@@ -55,4 +65,6 @@ if __name__ == "__main__":
             ]
         }
     )
-    print(result["messages"][-1].content)
+    # 用 .text 而不是 .content: 开启 extended thinking 的模型返回的 .content 是
+    # thinking/text 混合的 block 列表, .text 只取出其中的纯文本部分。
+    print(result["messages"][-1].text)
