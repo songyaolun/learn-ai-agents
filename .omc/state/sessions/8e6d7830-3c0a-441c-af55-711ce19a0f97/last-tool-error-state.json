@@ -1,7 +1,0 @@
-{
-  "tool_name": "mcp__chrome-devtools__evaluate_script",
-  "tool_input_preview": "{\"function\":\"async () => { const resp = await fetch('/'); /* just to keep async */ const b64 = 'iVBORw0KGgoAAAANSUhEUgAAAGQAAAA8CAIAAAB4LZlUAAAAAXNSR0IArs4c6QAAAJZJREFUeF7t1EEKgDAMBMD//9pWNIQKQqEwuadO...",
-  "error": "Error: InvalidCharacterError: Failed to execute 'atob' on 'Window': The string to be decoded is not correctly encoded.\npptr:evaluateHandle;performEvaluation%20(file%3A%2F%2F%2FUsers%2Fbytedance%2F.npm%2F_npx%2F15c61037b1978c83%2Fnode_modules%2Fchrome-devtools-mcp%2Fbuild%2Fsrc%2Ftools%2Fscript.js%3A97%3A34):1:422\nasync pptr:evaluate;performEvaluation%20(file%3A%2F%2F%2FUsers%2Fbytedance%2F.npm%2F_npx%2F15c61037b1978c83%2Fnode_modules%2Fchrome-devtools-mcp%2Fbuild%2Fsrc%2Ftools%2Fscript.js%3A99%3...",
-  "timestamp": "2026-07-07T09:44:40.627Z",
-  "retry_count": 1
-}

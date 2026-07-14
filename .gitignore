@@ -2,7 +2,7 @@
 __pycache__/
 *.pyc
 .DS_Store
-
+.omc/
 # chainlit 运行时产物 (本地文件存储 / 数据库)
 .files/
 chainlit.db

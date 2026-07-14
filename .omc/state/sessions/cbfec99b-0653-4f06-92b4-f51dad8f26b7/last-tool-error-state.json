@@ -1,7 +1,0 @@
-{
-  "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"uv run python langgraph/persistence.py 2>&1\",\"timeout\":60000,\"description\":\"运行 persistence 验证\"}",
-  "error": "Exit code 1\n=== 第一次运行: 写入 checkpoint 到 sqlite ===\nTraceback (most recent call last):\n  File \"/Users/bytedance/Documents/git_repo/learn-ai-agents/langgraph/persistence.py\", line 50, in <module>\n    with SqliteSaver(sqlite3.connect(DB_PATH, check_same_thread=False)) as checkpointer:\nTypeError: 'SqliteSaver' object does not support the context manager protocol",
-  "timestamp": "2026-07-06T12:42:44.402Z",
-  "retry_count": 2
-}
