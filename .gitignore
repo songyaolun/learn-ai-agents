@@ -1,8 +1,18 @@
 .env
 __pycache__/
 *.pyc
+.venv/
+.vscode/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
 .DS_Store
 .omc/
+build/
+dist/
+*.egg-info/
 # chainlit 运行时产物 (本地文件存储 / 数据库)
 .files/
 chainlit.db
