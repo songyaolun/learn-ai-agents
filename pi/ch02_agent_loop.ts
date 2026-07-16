@@ -37,6 +37,10 @@ function getModelFromEnv(): Model<Api> {
 }
 
 // ---- 自定义工具：schema（TypeBox）+ execute，比 ch01 多了 execute —— 循环执行交给 Agent ----
+// ch01 里工具只是"参数说明书"（执行代码写在循环里），这里把执行函数一起打包成 AgentTool，
+// Agent 会在模型要求调用时自动跑 execute、把返回的 content 塞回对话 —— 这就是"托管 loop"的含义。
+// execute 返回值两个字段的分工：content 会喂给模型（影响它下一步怎么答），
+// details 只给 UI/日志用（模型看不到），避免把大对象浪费在上下文里。
 const weatherParams = Type.Object({
   city: Type.String({ description: "城市名" }),
 });
@@ -72,12 +76,14 @@ const agent = new Agent({
   initialState: {
     systemPrompt: "你是一个简洁的中文助手，回答前先调用需要的工具。",
     model: getModelFromEnv(),
-    thinkingLevel: "off",
+    thinkingLevel: "off", // 关闭 extended thinking，演示输出更干净；可选 minimal/low/medium/high...
     tools: [getWeather, convertCurrency],
   },
 });
 
 // ---- 订阅事件流：等价于 langchain/stream.py 里 messages+updates 两种流合在一个回调里 ----
+// 为什么需要事件流：loop 在 Agent 内部跑，prompt() 要等全部跑完才返回 ——
+// 中间"模型正在逐字输出什么、正在执行哪个工具"只能靠订阅事件来观察（UI 也是这么做的）。
 agent.subscribe((event) => {
   switch (event.type) {
     case "message_update":
@@ -105,5 +111,5 @@ agent.subscribe((event) => {
 });
 
 // 一句话里两个任务 → 模型会发起两个工具调用，Agent 自动执行并把结果喂回模型直到得出最终答案。
-// 运行中还可以 agent.steer("...") 插话纠偏、agent.followUp("...") 排队追加任务（此处不演示）。
+// 运行中还可以插话纠偏（steering）/排队追加任务（followUp），见 ch04_steering.ts。
 await agent.prompt("北京今天天气怎么样？顺便帮我把 100 美元换算成人民币。");

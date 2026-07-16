@@ -16,10 +16,26 @@ SDK 搭的，代码可以从上读到下。
 | pi 的包 | 干什么 | 本仓库对应物 | 示例 |
 |---|---|---|---|
 | `@earendil-works/pi-ai` | 统一多厂商 LLM API（消息/流式事件/工具调用协议跨 Anthropic/OpenAI/Google 通用），**不含 loop** | `claude-code/ch01.py` 里的裸 anthropic SDK 那一层 | `ch01_pi_ai.ts` |
-| `@earendil-works/pi-agent-core` | `Agent` 类托管 agent loop：工具执行、事件流、steering/followUp 插话队列 | `langchain/quickstart.py` 的 `create_agent` | `ch02_agent_loop.ts` |
-| `@earendil-works/pi-coding-agent` | 完整 coding-agent harness：内置 read/bash/edit/write 工具、会话树持久化/分叉、compaction、skills/extensions/AGENTS.md | `deepagents/` 的 `create_deep_agent`（外加 `langgraph/time_travel.py` 的分叉、`middleware_summarization.py` 的压缩） | `ch03_coding_agent.ts` |
+| `@earendil-works/pi-agent-core` | `Agent` 类托管 agent loop：工具执行、事件流、steering/followUp 插话队列 | `langchain/quickstart.py` 的 `create_agent` | `ch02_agent_loop.ts`、`ch04_steering.ts` |
+| `@earendil-works/pi-coding-agent` | 完整 coding-agent harness：内置 read/bash/edit/write 工具、会话树持久化/分叉、compaction、skills/extensions/AGENTS.md | `deepagents/` 的 `create_deep_agent`（外加 `langgraph/time_travel.py` 的分叉、`middleware_summarization.py` 的压缩） | `ch03_coding_agent.ts`、`ch05_session_tree.ts`、`ch06_skills_memory.ts` |
 
 另有 `@earendil-works/pi-tui`（终端 UI 库）和 `pi` CLI 本体，不在示例范围内。
+
+## 概念覆盖对照
+
+| pi 概念 | 示例 | 对照本仓库 |
+|---|---|---|
+| 统一多厂商 API / 手写工具循环 | ch01 | claude-code/ch01.py |
+| 托管 loop / 自定义工具 / 事件流 | ch02 | langchain/quickstart.py + stream.py |
+| 内置编码工具 / tools 白名单 / defineTool | ch03 | deepagents/quickstart.py |
+| steering / followUp（运行中插话，pi 招牌） | ch04 | 无直接对应（langgraph 的 interrupt 是反方向） |
+| 会话 jsonl 持久化 / 续接 | ch05 | langgraph/persistence.py |
+| 会话树分叉 navigateTree | ch05 | langgraph/time_travel.py |
+| compaction 压缩 | ch05 | langchain/middleware_summarization.py |
+| skills 渐进式展示 / AGENTS.md 记忆 | ch06 | deepagents/skills_memory.py |
+
+未覆盖（超出 SDK 学习范围）：`pi-tui` 终端 UI、CLI 交互本体、extensions 插件系统（自定义 UI 组件/快捷键，
+强绑定 TUI）、RPC 模式、多模态图片输入、OAuth 登录流。
 
 ## 运行
 
@@ -29,6 +45,9 @@ npm install          # 独立的 node 工程，不走仓库根部的 uv
 npm run ch01         # pi-ai：统一 LLM API + 手写工具循环
 npm run ch02         # pi-agent-core：Agent 托管 loop + 自定义工具 + 事件流
 npm run ch03         # pi-coding-agent SDK：迷你 Claude Code（内置工具 + 会话管理）
+npm run ch04         # steering/followUp：agent 运行中插话纠偏/排队追加任务
+npm run ch05         # 会话树：jsonl 持久化 + 续接 + 分叉 + compaction
+npm run ch06         # skills + AGENTS.md：技能库渐进式展示 + 长期偏好
 ```
 
 环境变量沿用根目录 `.env`（`MODEL_ID` 必需；`ANTHROPIC_BASE_URL` 可选网关 +

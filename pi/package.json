@@ -7,7 +7,10 @@
   "scripts": {
     "ch01": "tsx ch01_pi_ai.ts",
     "ch02": "tsx ch02_agent_loop.ts",
-    "ch03": "tsx ch03_coding_agent.ts"
+    "ch03": "tsx ch03_coding_agent.ts",
+    "ch04": "tsx ch04_steering.ts",
+    "ch05": "tsx ch05_session_tree.ts",
+    "ch06": "tsx ch06_skills_memory.ts"
   },
   "dependencies": {
     "@earendil-works/pi-ai": "^0.80.7",

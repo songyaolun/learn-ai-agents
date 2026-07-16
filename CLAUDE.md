@@ -60,6 +60,9 @@ cd pi && npm install
 npm run ch01    # pi-ai：统一多厂商 LLM API + 手写工具调用循环
 npm run ch02    # pi-agent-core：Agent 类托管 agent loop + 自定义工具 + 事件流
 npm run ch03    # pi-coding-agent SDK：迷你 Claude Code（内置编码工具 + 会话管理）
+npm run ch04    # steering/followUp：agent 运行中插话纠偏/排队追加任务（pi 招牌能力）
+npm run ch05    # 会话树：jsonl 持久化 + 续接 + navigateTree 分叉 + compaction
+npm run ch06    # skills + AGENTS.md：技能库渐进式展示 + 长期偏好（对照 deepagents/skills_memory.py）
 npx tsc --noEmit  # pi/ 唯一的静态检查手段（其余目录无 lint/test）
 
 # 启动 Chainlit Web UI（左上角切换 4 个 chat profile: Deep Research / HITL / Supervisor / RAG）
@@ -145,7 +148,10 @@ middleware 相关（`create_agent(middleware=[...])`，可以叠加多个）：
 [pi](https://github.com/badlogic/pi-mono)（原 badlogic/pi-mono，作者 Mario Zechner）是 70k+ stars 的 TS coding agent 工具箱，设计哲学与 LangChain 系相反——不做图 runtime、不做重抽象，消息就是可 `JSON.stringify` 的普通对象。独立 npm 工程（`pi/package.json`，`"type": "module"`，tsx 运行），三个示例按 pi 自己的三层包结构递进，与本仓库其他目录一一对照：
 - **ch01_pi_ai.ts**：`@earendil-works/pi-ai`，统一多厂商 LLM API（对照 claude-code/ch01.py 的裸 anthropic SDK 层）。演示 completeSimple/streamSimple/手写 `stopReason === "toolUse"` 工具循环。**踩坑**：请求失败不抛异常，错误静默放在返回消息的 `stopReason === "error"` + `errorMessage` 里，不检查只会看到空输出、usage 全 0——三个示例都加了防御性检查。
 - **ch02_agent_loop.ts**：`@earendil-works/pi-agent-core` 的 `Agent` 类托管 loop（对照 langchain/quickstart.py 的 `create_agent`），TypeBox schema + execute 定义 `AgentTool`，`subscribe` 事件流观察逐 token 输出和工具执行；pi 特色是 steering/followUp 队列（运行中插话改方向）。
-- **ch03_coding_agent.ts**：`@earendil-works/pi-coding-agent` 的 `createAgentSession`（对照 deepagents 的 `create_deep_agent`）：内置 read/bash/edit/write 等编码工具、会话树持久化/分叉（对照 langgraph/time_travel.py）、compaction（对照 middleware_summarization.py）、skills/AGENTS.md（对照 deepagents/skills_memory.py）。示例用 `SessionManager.inMemory()` + `tools` 白名单只开只读工具。注意 pi 的文件工具直接操作真实磁盘（相当于 deepagents 的 FilesystemBackend 是常态）。
+- **ch03_coding_agent.ts**：`@earendil-works/pi-coding-agent` 的 `createAgentSession`（对照 deepagents 的 `create_deep_agent`）：内置 read/bash/edit/write 等编码工具 + `tools` 白名单 + `defineTool` 自定义工具。示例用 `SessionManager.inMemory()` 不落盘。注意 pi 的文件工具直接操作真实磁盘（相当于 deepagents 的 FilesystemBackend 是常态）。
+- **ch04_steering.ts**：pi 招牌能力 steering/followUp——agent 运行中人主动插话（steer 当前工具跑完即生效改方向；followUp 排队等任务完整结束后触发新一轮）。与 langgraph 的 `interrupt` 方向相反（那是 agent 停下等人）。工具要配 `toolExecution: "sequential"` 拉长执行窗口才有机会观察插话生效；结尾要 `await agent.waitForIdle()`，否则 followUp 触发的后续轮次跑一半脚本就退出了。
+- **ch05_session_tree.ts**：会话持久化三件套——`SessionManager.create()` 落盘 jsonl（每条消息一个带 id/parentId 的 entry，天然构成树）、`SessionManager.open()` 续接（对照 langgraph/persistence.py）、`navigateTree()` 把叶子指针挪回历史节点即分叉（对照 langgraph/time_travel.py，但不用翻 checkpoint 列表）、`session.compact()` 手动触发压缩（对照 middleware_summarization.py）。
+- **ch06_skills_memory.ts**：skills（`<cwd>/.pi/skills/<名字>/SKILL.md`，YAML frontmatter 的 name/description 预先进 system prompt、全文按需 read——渐进式展示）+ AGENTS.md（每轮全文进 system prompt，放用户偏好）。目录约定与 Claude Code 同构，AGENTS.md/CLAUDE.md 互通。`DefaultResourceLoader` 的资源发现是纯本地扫描，这一步无需 API key 即可验证（本示例前半段可离线跑通）。对照 deepagents/skills_memory.py。
 
 环境变量沿用根目录 `.env`：pi-ai 读 `ANTHROPIC_OAUTH_TOKEN`/`ANTHROPIC_API_KEY`（前者优先），示例在设置了 `ANTHROPIC_BASE_URL` 时会 `delete` OAuth token（对应 Python 侧 pop `ANTHROPIC_AUTH_TOKEN` 的约定）；网关 baseUrl 通过覆盖 `Model` 对象上的 `baseUrl` 字段实现（不是全局配置），`MODEL_ID` 不在 pi 内置目录时拿内置模型当模板改 `id` 兜底。npm 包名已从老文章里的 `@mariozechner/pi-*` 迁移为 `@earendil-works/pi-*`。调研笔记与更多踩坑见 `pi/README.md`。
 

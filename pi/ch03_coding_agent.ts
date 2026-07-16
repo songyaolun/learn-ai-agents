@@ -13,8 +13,11 @@
  * 另一个差别：deepagents 默认虚拟文件系统（StateBackend），pi 的文件工具直接操作真实磁盘 ——
  * 相当于 deepagents/backend.py 里 FilesystemBackend 是常态而非可选项。
  *
+ * "harness" 一词的含义：模型 + loop 之外的所有配套设施 —— 给什么工具、系统提示词怎么组装、
+ * 历史怎么存、上下文快满了怎么压缩。ch01 是裸模型，ch02 加了 loop，这一章补齐 harness。
+ *
  * 本文件演示：
- * 1. SessionManager.inMemory() —— 不落盘（换成 SessionManager.create(cwd) 即持久化+可续接）
+ * 1. SessionManager.inMemory() —— 不落盘（持久化/会话树分叉见 ch05_session_tree.ts）
  * 2. tools 白名单 —— 只开只读的 read/ls，不给 bash/write/edit（演示脚本避免意外改文件）
  * 3. defineTool 自定义工具与内置工具并存
  * 4. 事件订阅观察内置工具的真实执行
