@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目性质
 
-这是一个个人学习仓库，按框架抽象层级递进地实现/对比几种 AI Agent 构建方式：从裸写 Anthropic SDK 的 agent loop，到 LangChain 的 `create_agent`，再到 LangGraph 的底层图 runtime，再到 DeepAgents 的 planning/subagent harness，最后用 Chainlit 包一层 Web UI。每个脚本头部的 docstring 都会显式对比"这一版比上一版多了什么"，阅读代码时应优先看这些 docstring 建立心智模型。
+这是一个个人学习仓库，按框架抽象层级递进地实现/对比几种 AI Agent 构建方式：从裸写 Anthropic SDK 的 agent loop，到 LangChain 的 `create_agent`，再到 LangGraph 的底层图 runtime，再到 DeepAgents 的 planning/subagent harness，最后用 Chainlit 包一层 Web UI；另有 `pi/`（TypeScript）作为"轻抽象"路线的反方参照。每个脚本头部的 docstring 都会显式对比"这一版比上一版多了什么"，阅读代码时应优先看这些 docstring 建立心智模型。
 
 各脚本相互独立，无共享的内部模块/包结构 —— 没有 `src/` 布局，也没有测试套件。
 
@@ -56,6 +56,16 @@ uv run python deepagents/ch_08_structured_output.py  # response_format：deep ag
 uv run python deepagents/ch_10_combo.py          # 组合演示：subagents+真实磁盘+HITL+结构化输出拼一个研究助手
 # --- rag/ ---
 uv run python rag/quickstart.py          # 需 VOYAGE_API_KEY，检索本仓库模块说明并回答问题
+
+# 运行 pi/ 下的示例（TypeScript，独立 npm 工程，不走 uv；Node >= 20）
+cd pi && npm install
+npm run ch01    # pi-ai：统一多厂商 LLM API + 手写工具调用循环
+npm run ch02    # pi-agent-core：Agent 类托管 agent loop + 自定义工具 + 事件流
+npm run ch03    # pi-coding-agent SDK：迷你 Claude Code（内置编码工具 + 会话管理）
+npm run ch04    # steering/followUp：agent 运行中插话纠偏/排队追加任务（pi 招牌能力）
+npm run ch05    # 会话树：jsonl 持久化 + 续接 + navigateTree 分叉 + compaction
+npm run ch06    # skills + AGENTS.md：技能库渐进式展示 + 长期偏好（对照 deepagents/skills_memory.py）
+npx tsc --noEmit  # pi/ 唯一的静态检查手段（其余目录无 lint/test）
 
 # 启动 Chainlit Web UI（左上角切换 4 个 chat profile: Deep Research / HITL / Supervisor / RAG）
 uv run chainlit run web/app.py    # 打开 http://localhost:8000
@@ -136,5 +146,16 @@ middleware 相关（`create_agent(middleware=[...])`，可以叠加多个）：
 
 踩坑记录：`langgraph/ch_12_multi_agent.py` 的 supervisor 提示词最初没有强制"必须先经过 writer 才能 FINISH"，导致 supervisor 有时在 researcher 给出信息后就直接判定 FINISH、跳过 writer，网页上会看到只有 researcher 步骤、没有最终整理的答案。已在 prompt 里加了强制要求，网页 handler 也加了兜底（writer 没跑就退化用 researcher 的最后内容作为答案，不会给空白）。
 
+### pi/（earendil-works/pi：TypeScript "反方参照"，唯一的非 Python 目录）
+[pi](https://github.com/badlogic/pi-mono)（原 badlogic/pi-mono，作者 Mario Zechner）是 70k+ stars 的 TS coding agent 工具箱，设计哲学与 LangChain 系相反——不做图 runtime、不做重抽象，消息就是可 `JSON.stringify` 的普通对象。独立 npm 工程（`pi/package.json`，`"type": "module"`，tsx 运行），三个示例按 pi 自己的三层包结构递进，与本仓库其他目录一一对照：
+- **ch01_pi_ai.ts**：`@earendil-works/pi-ai`，统一多厂商 LLM API（对照 claude-code/ch01.py 的裸 anthropic SDK 层）。演示 completeSimple/streamSimple/手写 `stopReason === "toolUse"` 工具循环。**踩坑**：请求失败不抛异常，错误静默放在返回消息的 `stopReason === "error"` + `errorMessage` 里，不检查只会看到空输出、usage 全 0——三个示例都加了防御性检查。
+- **ch02_agent_loop.ts**：`@earendil-works/pi-agent-core` 的 `Agent` 类托管 loop（对照 langchain/quickstart.py 的 `create_agent`），TypeBox schema + execute 定义 `AgentTool`，`subscribe` 事件流观察逐 token 输出和工具执行；pi 特色是 steering/followUp 队列（运行中插话改方向）。
+- **ch03_coding_agent.ts**：`@earendil-works/pi-coding-agent` 的 `createAgentSession`（对照 deepagents 的 `create_deep_agent`）：内置 read/bash/edit/write 等编码工具 + `tools` 白名单 + `defineTool` 自定义工具。示例用 `SessionManager.inMemory()` 不落盘。注意 pi 的文件工具直接操作真实磁盘（相当于 deepagents 的 FilesystemBackend 是常态）。
+- **ch04_steering.ts**：pi 招牌能力 steering/followUp——agent 运行中人主动插话（steer 当前工具跑完即生效改方向；followUp 排队等任务完整结束后触发新一轮）。与 langgraph 的 `interrupt` 方向相反（那是 agent 停下等人）。工具要配 `toolExecution: "sequential"` 拉长执行窗口才有机会观察插话生效；结尾要 `await agent.waitForIdle()`，否则 followUp 触发的后续轮次跑一半脚本就退出了。
+- **ch05_session_tree.ts**：会话持久化三件套——`SessionManager.create()` 落盘 jsonl（每条消息一个带 id/parentId 的 entry，天然构成树）、`SessionManager.open()` 续接（对照 langgraph/persistence.py）、`navigateTree()` 把叶子指针挪回历史节点即分叉（对照 langgraph/time_travel.py，但不用翻 checkpoint 列表）、`session.compact()` 手动触发压缩（对照 middleware_summarization.py）。
+- **ch06_skills_memory.ts**：skills（`<cwd>/.pi/skills/<名字>/SKILL.md`，YAML frontmatter 的 name/description 预先进 system prompt、全文按需 read——渐进式展示）+ AGENTS.md（每轮全文进 system prompt，放用户偏好）。目录约定与 Claude Code 同构，AGENTS.md/CLAUDE.md 互通。`DefaultResourceLoader` 的资源发现是纯本地扫描，这一步无需 API key 即可验证（本示例前半段可离线跑通）。对照 deepagents/skills_memory.py。
+
+环境变量沿用根目录 `.env`：pi-ai 读 `ANTHROPIC_OAUTH_TOKEN`/`ANTHROPIC_API_KEY`（前者优先），示例在设置了 `ANTHROPIC_BASE_URL` 时会 `delete` OAuth token（对应 Python 侧 pop `ANTHROPIC_AUTH_TOKEN` 的约定）；网关 baseUrl 通过覆盖 `Model` 对象上的 `baseUrl` 字段实现（不是全局配置），`MODEL_ID` 不在 pi 内置目录时拿内置模型当模板改 `id` 兜底。npm 包名已从老文章里的 `@mariozechner/pi-*` 迁移为 `@earendil-works/pi-*`。调研笔记与更多踩坑见 `pi/README.md`。
+
 ### 空占位目录
-`deep_agents/`（注意与 `deepagents/` 拼写相近，实为空目录，未使用）、`openclaw/`、`pi/` 均只含 `.gitkeep`，是预留给未来学习内容的占位符，当前无代码。
+`deep_agents/`（注意与 `deepagents/` 拼写相近，实为空目录，未使用）、`openclaw/` 均只含 `.gitkeep`，是预留给未来学习内容的占位符，当前无代码。
