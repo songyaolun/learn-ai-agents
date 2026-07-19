@@ -1,0 +1,9 @@
+# LangChain 1.x 学习示例集 —— 运行依赖
+# 安装: pip install -r requirements.txt --user --break-system-packages
+langchain>=1.3.11
+langchain-anthropic>=1.4.8
+langchain-community>=0.4.2
+langgraph>=1.2.7
+langgraph-checkpoint-sqlite>=3.1.0
+python-dotenv>=1.2.2
+pydantic>=2.0
