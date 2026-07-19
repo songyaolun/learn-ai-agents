@@ -1,0 +1,40 @@
+# LangGraph 学习示例依赖清单
+# 安装: pip install -r requirements.txt (建议先建 venv)
+# 版本以本地实测为准 (langgraph 1.2.7 / langchain 1.x), 用 >= 做下限约束, 便于后续小版本升级。
+
+# --- 核心: 图运行时 + checkpointer ---
+langgraph>=1.2.7,<2.0            # 图构建/运行时: StateGraph、Send、Command、interrupt、Pregel、func API
+langgraph-checkpoint-sqlite>=3.1.0  # SqliteSaver: 落盘型 checkpointer, 崩溃恢复/持久化示例用
+
+# --- LangChain 主框架 + 模型接入 ---
+langchain>=1.3.0,<2.0           # create_agent 等高层 agent 构造 (multi_agent.py / workflows_agents.py)
+langchain-core>=1.4.0,<2.0      # 消息类型、@tool、Runnable、FakeChatModel 替身; 也自带 RAG 本地件 (见 B2 说明)
+langchain-anthropic>=1.4.0,<2.0 # ChatAnthropic: 统一模型接入, model_id/base_url/key 全走 .env
+
+# --- 测试 ---
+pytest>=8.0.0,<9.0              # 运行 test_examples.py 的测试 runner
+
+# --- 配置 ---
+python-dotenv>=1.2.0            # load_dotenv(override=True) 读取 .env
+
+# --- 多 Agent 联网搜索工具 (multi_agent.py 用到) ---
+langchain-community>=0.3.0      # DuckDuckGoSearchRun 工具封装
+duckduckgo-search>=6.0.0        # DuckDuckGoSearchRun 的实际检索后端 (联网; 无网时该示例走替身)
+
+# --- 数据校验 (结构化输出 schema) ---
+pydantic>=2.13.0,<3.0           # BaseModel/Field 定义结构化输出 schema
+
+# =====================================================================
+# 以下为 B2/B3 扩展示例说明 —— 目标零额外依赖, 无需在此新增包:
+#   * B2 Agentic RAG (向量检索): 使用 langchain-core 自带的
+#       from langchain_core.vectorstores import InMemoryVectorStore
+#       from langchain_core.embeddings import DeterministicFakeEmbedding
+#     (已被上面的 langchain-core 覆盖, 无需额外安装)
+#   * B3 SQL agent: 使用 Python 标准库 sqlite3, 无需任何第三方包
+# =====================================================================
+
+# =====================================================================
+# 可选依赖 (默认不装, 需要真实能力时按需开启)
+# =====================================================================
+# voyageai                     # 可选: B2 RAG 若想用真实 embedding 替代 DeterministicFakeEmbedding
+# langchain-voyageai           # 可选: 上面 voyageai 的 LangChain 封装
