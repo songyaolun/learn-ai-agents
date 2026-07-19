@@ -26,6 +26,7 @@ MCP = Model Context Protocol, 模型上下文协议 —— 一个让智能体接
 """
 
 import os
+import asyncio
 from typing import List, Dict
 
 from dotenv import load_dotenv
@@ -46,22 +47,35 @@ model = ChatAnthropic(
 # MCP 客户端配置 (骨架)
 # 实际使用前需: 1. 安装 langchain-mcp-adapters 2. 启动 MCP server
 mcp_config = {
-    "servers": [
+    "weather": {
         # stdio 传输方式 (本地调试)
-        {"type": "stdio", "command": ["python", "-m", "langchain_mcp_adapters.server"]},
+        "transport": "stdio",
+        "command": "python",
+        "args": ["-m", "langchain_mcp_adapters.server"],
         # HTTP 传输方式 (生产环境)
-        # {"type": "http", "url": "http://localhost:8000/mcp"}
-    ]
+        # "transport": "streamable_http",
+        # "url": "http://localhost:8000/mcp",
+    }
 }
 
 # MCP 工具调用代理 (骨架)
+async def _call_mcp_tool(tool_name: str, tool_args: Dict) -> str:
+    """使用 langchain-mcp-adapters 当前客户端 API 异步加载并调用 MCP 工具。"""
+    from langchain_mcp_adapters.client import MultiServerMCPClient
+
+    client = MultiServerMCPClient(mcp_config)
+    tools = await client.get_tools()
+    for tool in tools:
+        if tool.name == tool_name:
+            return await tool.ainvoke(tool_args)
+    available = ", ".join(tool.name for tool in tools) or "无"
+    return f"[MCP 调用失败] 未找到工具 {tool_name}; 当前可用工具: {available}"
+
+
 def mcp_tool_proxy(tool_name: str, tool_args: Dict) -> str:
     """通过 MCP 协议调用外部工具的代理函数"""
     try:
-        # 实际运行时需导入并初始化 MCP 客户端
-        from langchain_mcp_adapters import MultiServerMCPClient
-        client = MultiServerMCPClient.from_config(mcp_config)
-        return client.call_tool(tool_name, tool_args)
+        return asyncio.run(_call_mcp_tool(tool_name, tool_args))
     except ImportError:
         return f"[MCP 未配置] 需安装 langchain-mcp-adapters 并启动 MCP server 才能调用 {tool_name}"
     except Exception as e:

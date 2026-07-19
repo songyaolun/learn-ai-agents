@@ -64,14 +64,9 @@ async def stream_events() -> None:
         input_msg,
         config=config,
         version="v2",
-        # 订阅的事件类型: 模型流、工具开始/结束、节点执行
-        include_types=[
-            "on_chat_model_stream",
-            "on_tool_start",
-            "on_tool_end",
-            "on_chain_start",
-            "on_chain_end",
-        ],
+        # include_types 匹配的是 runnable 类型 (如 chat_model/tool/chain),
+        # 不是完整事件名 (如 on_tool_start)。具体事件名在循环里用 event["event"] 过滤。
+        include_types=["chat_model", "tool", "chain"],
     ):
         event_type = event["event"]
         payload = event["data"]
@@ -84,21 +79,21 @@ async def stream_events() -> None:
                 print(f"[MODEL] {token}", end="", flush=True)
         elif event_type == "on_tool_start":
             # 工具调用开始事件
-            tool_name = payload["name"]
-            tool_args = payload["args"]
+            tool_name = event["name"]
+            tool_args = payload["input"]
             print(f"\n[TOOL-START] {tool_name}({tool_args})")
         elif event_type == "on_tool_end":
             # 工具调用结束事件
-            tool_name = payload["name"]
+            tool_name = event["name"]
             tool_result = payload["output"]
             print(f"[TOOL-END] {tool_name} -> {tool_result}")
         elif event_type == "on_chain_start":
             # 节点执行开始事件
-            node_name = payload["name"]
+            node_name = event["name"]
             print(f"\n[CHAIN-START] {node_name}")
         elif event_type == "on_chain_end":
             # 节点执行结束事件
-            node_name = payload["name"]
+            node_name = event["name"]
             print(f"[CHAIN-END] {node_name}")
 
 

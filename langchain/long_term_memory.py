@@ -32,7 +32,7 @@ def main():
     # 1. 初始化内存态存储(无外部依赖,可独立运行)
     store = InMemoryStore()
     user_id = "user_123"
-    namespace = f"user_memory:{user_id}"
+    namespace = ("user_memory", user_id)
 
     # 2. 写入长期记忆: 存储用户偏好(跨会话持久化)
     # 这里模拟用户在会话A中设置的偏好
@@ -49,7 +49,7 @@ def main():
     print("✅ 内存态存储 put/get 验证通过")
 
     # 4. 命名空间隔离演示: 不同用户数据互不干扰
-    another_user_namespace = "user_memory:user_456"
+    another_user_namespace = ("user_memory", "user_456")
     store.put(another_user_namespace, "coffee_preference", "拿铁咖啡,加奶")
     another_coffee_pref = store.get(another_user_namespace, "coffee_preference")
 

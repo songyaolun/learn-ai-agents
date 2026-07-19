@@ -124,7 +124,7 @@ if __name__ == "__main__":
 
     # 需要模型调用的部分 (需本地配置 .env)
     print("\n=== 需要模型调用的部分 ===")
-    if os.getenv("MODEL_ID"):
+    if os.getenv("MODEL_ID") and os.getenv("ANTHROPIC_API_KEY"):
         agent = build_agent()
         result = agent.invoke({
             "messages": [
@@ -134,4 +134,4 @@ if __name__ == "__main__":
         print("\n最终回答:")
         print(result["messages"][-1].text)
     else:
-        print("未检测到 MODEL_ID, 跳过 agent 调用。配置 .env 后可看到『先检索再作答』的完整效果。")
+        print("未检测到 MODEL_ID / ANTHROPIC_API_KEY, 跳过 agent 调用。配置 .env 后可看到『先检索再作答』的完整效果。")

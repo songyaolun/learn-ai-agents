@@ -22,10 +22,13 @@ import os
 import asyncio
 import tempfile
 import shutil
+from typing import Annotated, NotRequired, TypedDict
 
 from dotenv import load_dotenv
 from langchain.agents import create_agent
 from langchain_anthropic import ChatAnthropic
+from langchain_core.messages import AnyMessage
+from langgraph.graph.message import add_messages
 from langgraph.checkpoint.memory import InMemorySaver
 # 踩坑记录: LangChain 1.x 已移除 langchain_core.pydantic_v1 兼容垫片, 直接从 pydantic 导入即可
 # (现在生态统一用 pydantic v2)。照旧教程写 from langchain_core.pydantic_v1 import ... 会 ImportError。
@@ -46,10 +49,12 @@ def get_weather(city: str) -> str:
     return f"It's always sunny in {city}!"
 
 # 1. 状态 schema 定义: 描述 agent 状态结构
-class AgentState(BaseModel):
+class AgentState(TypedDict):
     """Agent state schema."""
-    messages: list = Field(description="对话消息列表")
-    intermediate_steps: list = Field(description="中间步骤")
+    # 自定义 state_schema 会替换默认 AgentState；messages 必须保留 add_messages reducer,
+    # 否则同一 thread_id 的多轮 invoke 会覆盖而不是追加消息历史。
+    messages: Annotated[list[AnyMessage], add_messages]
+    intermediate_steps: NotRequired[list]
 
 # 2. 上下文 schema 定义: 描述 agent 上下文结构
 class AgentContext(BaseModel):
@@ -80,20 +85,21 @@ async def async_agent_demo():
     config = {
         "configurable": {
             "thread_id": "advanced-demo-1",
-            "context": AgentContext(
-                user_id="user-123",
-                session_id="session-456",
-                timestamp="2026-07-14T12:00:00Z"
-            )
         }
     }
+    context = AgentContext(
+        user_id="user-123",
+        session_id="session-456",
+        timestamp="2026-07-14T12:00:00Z"
+    )
     result = await agent.ainvoke(
         {
             "messages": [
                 {"role": "user", "content": "What's the weather in New York?"}
             ]
         },
-        config=config
+        config=config,
+        context=context,
     )
     return result
 

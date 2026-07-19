@@ -21,7 +21,7 @@ import os
 
 from dotenv import load_dotenv
 from langchain.agents import create_agent
-from langchain.agents.middleware import AgentMiddleware
+from langchain.agents.middleware import AgentMiddleware, hook_config
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, AIMessage
 
@@ -57,6 +57,7 @@ class ContentSafetyMiddleware(AgentMiddleware):
             "回答格式: 安全/不安全, 理由: ..."
         )
 
+    @hook_config(can_jump_to=["end"])
     def before_model(self, state, runtime):
         """模型调用前: 审核用户输入。返回部分状态更新或 None。"""
         # 获取用户输入
@@ -71,9 +72,7 @@ class ContentSafetyMiddleware(AgentMiddleware):
             if "不安全" in audit_result.content:
                 # 拦截不安全输入: 追加一条提示消息, 并请求跳转到结束
                 return {
-                    "messages": [
-                        AIMessage(content="您的输入包含不安全内容, 请调整后重试。")
-                    ],
+                    "messages": [AIMessage(content="您的输入包含不安全内容, 请调整后重试。")],
                     "jump_to": "end",
                 }
         return None
@@ -90,10 +89,11 @@ class ContentSafetyMiddleware(AgentMiddleware):
             )
             # 解析审核结果
             if "不安全" in audit_result.content:
-                # 替换不安全输出
+                # 替换不安全输出: 沿用原 AIMessage 的 id, 让 add_messages reducer 覆盖原消息,
+                # 避免把危险原文留在 result["messages"] 或 checkpoint 历史里。
                 return {
                     "messages": [
-                        AIMessage(content="模型输出包含不安全内容, 已拦截。")
+                        AIMessage(content="模型输出包含不安全内容, 已拦截。", id=model_msg.id)
                     ]
                 }
         return None
