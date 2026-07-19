@@ -1,14 +1,14 @@
 {
-  "_comment": "这是 langgraph.json 的模板 (JSON 不支持注释, 故用 _comment 字段说明, langgraph-cli 会忽略未知字段)。使用时请复制为 langgraph.json 并按需替换占位符。字段含义详见 DEPLOYMENT.md 第 1 节。",
+  "_comment": "这是 langgraph.json 的模板 (JSON 不支持注释, 故用 _comment 字段说明, langgraph-cli 会忽略未知字段)。使用时请复制为 langgraph.json 并按需替换占位符。字段含义详见 ch_22_DEPLOYMENT.md 第 1 节。",
   "_comment_dependencies": "dependencies: 声明项目依赖来源。'.' 表示当前目录 (读取本地包/pyproject); 或指向 requirements 文件, 如 './requirements.txt'。langgraph-cli 据此在容器里装依赖。",
   "dependencies": [
     "."
   ],
-  "_comment_graphs": "graphs: 把 '图对象的导入路径' 映射为一个部署名。格式为 '<文件路径>:<模块内变量名>'。下面的 quickstart 指向 ./quickstart.py 里已导出的顶层变量 graph (即 builder.compile(...) 的返回值)。你自己的图需在对应 .py 里导出一个顶层 graph 变量 (或 CompiledStateGraph / StateGraph 对象)。可配置多个键值对, 每个键就是一个可独立调用的图名。",
+  "_comment_graphs": "graphs: 把 '图对象的导入路径' 映射为一个部署名。格式为 '<文件路径>:<模块内变量名>'。下面的 quickstart 指向 ./ch_01_quickstart.py 里已导出的顶层变量 graph (即 builder.compile(...) 的返回值)。你自己的图需在对应 .py 里导出一个顶层 graph 变量 (或 CompiledStateGraph / StateGraph 对象)。可配置多个键值对, 每个键就是一个可独立调用的图名。",
   "graphs": {
-    "quickstart": "./quickstart.py:graph"
+    "quickstart": "./ch_01_quickstart.py:graph"
   },
-  "_comment_env": "env: 指向环境变量文件 (相对路径), 平台/CLI 启动时加载。密钥请只写在该 .env 文件里, 切勿把真实密钥写进本模板或提交到仓库。变量清单见 DEPLOYMENT.md 第 4 节。",
+  "_comment_env": "env: 指向环境变量文件 (相对路径), 平台/CLI 启动时加载。密钥请只写在该 .env 文件里, 切勿把真实密钥写进本模板或提交到仓库。变量清单见 ch_22_DEPLOYMENT.md 第 4 节。",
   "env": ".env",
   "_comment_python_version": "python_version: 可选, 声明运行时 Python 版本, 本仓库示例要求 >= 3.11。",
   "python_version": "3.11"
