@@ -16,6 +16,7 @@ dist/
 # chainlit 运行时产物 (本地文件存储 / 数据库)
 .files/
 chainlit.db
+.chainlit/
 
 # langgraph sqlite checkpoint (langgraph/persistence.py 生成)
 langgraph_checkpoints.db
