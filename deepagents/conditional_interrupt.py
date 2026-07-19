@@ -87,9 +87,14 @@ def needs_approval(req: ToolCallRequest) -> bool:
     """when 谓词: 只有金额超过阈值才打断等人工审批, 否则返回 False = 自动放行。
 
     只依赖 req.tool_call["args"], 不碰 req.tool / req.runtime (见踩坑记录 1),
-    以便同时兼容 batch / per_call 两种模式。
+    以便同时兼容 batch / per_call 两种模式。模型有时会先把 amount 生成为
+    JSON 字符串, 所以这里先安全转 float; 无法解析的异常值保守地触发人工审批。
     """
-    amount = req.tool_call["args"].get("amount", 0)
+    raw_amount = req.tool_call["args"].get("amount", 0)
+    try:
+        amount = float(raw_amount)
+    except (TypeError, ValueError):
+        return True
     return amount > APPROVAL_THRESHOLD
 
 
@@ -168,7 +173,7 @@ if __name__ == "__main__":
     # 1) when 谓词是可调用的, 且对样例输入返回 bool、阈值逻辑正确。
     #    直接手工造一个 ToolCallRequest (无需模型) 喂给谓词。
     big = ToolCallRequest(
-        tool_call={"name": "transfer_funds", "args": {"to": "x", "amount": 5000}, "id": "1"},
+        tool_call={"name": "transfer_funds", "args": {"to": "x", "amount": "5000"}, "id": "1"},
         tool=None,
         state={},
         runtime=None,
@@ -184,7 +189,14 @@ if __name__ == "__main__":
     assert isinstance(r_big, bool) and isinstance(r_small, bool), "when 必须返回 bool"
     assert r_big is True, "大额 (>阈值) 应触发 interrupt"
     assert r_small is False, "小额 (<=阈值) 应自动放行"
-    print(f"[结构化断言] when 谓词返回 bool 且阈值逻辑正确: 5000→{r_big}, 10→{r_small}")
+    invalid = ToolCallRequest(
+        tool_call={"name": "transfer_funds", "args": {"to": "z", "amount": "not-a-number"}, "id": "3"},
+        tool=None,
+        state={},
+        runtime=None,
+    )
+    assert needs_approval(invalid) is True, "无法解析的金额应保守触发人工审批"
+    print(f"[结构化断言] when 谓词返回 bool 且阈值逻辑正确: '5000'→{r_big}, 10→{r_small}")
 
     # 2) InterruptOnConfig 能正常构造, 且携带 when 谓词。
     cfg = InterruptOnConfig(allowed_decisions=["approve", "reject"], when=needs_approval)

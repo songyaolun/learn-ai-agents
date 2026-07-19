@@ -43,7 +43,6 @@ from deepagents import (
     register_harness_profile,
     register_provider_profile,
 )
-from langchain_anthropic import ChatAnthropic
 
 load_dotenv(override=True)
 
@@ -64,9 +63,10 @@ def build_harness_profile() -> HarnessProfile:
 # ---- 2. 定制一个 ProviderProfile: 重塑"模型怎么建" ----
 def build_provider_profile() -> ProviderProfile:
     """构建一个自定义 provider profile, 设置构建模型时的默认 init kwargs。"""
-    return ProviderProfile(
-        init_kwargs={"temperature": 0.2, "max_tokens": 1024},
-    )
+    init_kwargs = {"temperature": 0.2, "max_tokens": 1024}
+    if os.getenv("ANTHROPIC_BASE_URL"):
+        init_kwargs["base_url"] = os.environ["ANTHROPIC_BASE_URL"]
+    return ProviderProfile(init_kwargs=init_kwargs)
 
 
 def build_agent(model):
@@ -112,7 +112,11 @@ if __name__ == "__main__":
         raise AssertionError("init_kwargs 本应只读")
     except TypeError:
         pass
-    register_provider_profile("profiles_demo_provider", pp)
+    register_provider_profile("anthropic:profiles-demo-model", pp)
+    if os.getenv("MODEL_ID"):
+        # 真实模型路径也注册到当前 MODEL_ID, 下面把字符串传给 create_deep_agent,
+        # 让 DeepAgents 走 string-model resolution, 从而真正消费 ProviderProfile。
+        register_provider_profile(os.environ["MODEL_ID"], pp)
 
     # general-purpose 子 agent 开关也能构造 (演示禁用默认子 agent 的写法)
     gp_off = HarnessProfile(general_purpose_subagent=GeneralPurposeSubagentProfile(enabled=False))
@@ -127,11 +131,7 @@ if __name__ == "__main__":
 
     # === 需要真实模型才能观察"行为差异"的部分 ===
     if os.getenv("MODEL_ID"):
-        model = ChatAnthropic(
-            model=os.environ["MODEL_ID"],
-            base_url=os.getenv("ANTHROPIC_BASE_URL") or None,
-        )
-        agent = build_agent(model=model)
+        agent = build_agent(model=os.environ["MODEL_ID"])
         result = agent.invoke({"messages": [{"role": "user", "content": "介绍一下你自己"}]})
         print(result["messages"][-1].text)
         print("(提示: profile 是否真的隐藏了 grep/追加了中文后缀, 属于模型行为,"

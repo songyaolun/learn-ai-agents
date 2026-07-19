@@ -82,11 +82,27 @@ class InMemoryBackend(BackendProtocol):
         entries = [FileInfo(path=p) for p in sorted(self._files)]
         return LsResult(entries=entries)
 
+    def _is_under_path(self, file_path: str, path: str | None) -> bool:
+        """判断 file_path 是否位于 path 范围内, 用于 grep/glob 的路径收窄。"""
+        if path in (None, "", "/"):
+            return True
+        normalized = path.rstrip("/")
+        return file_path == normalized or file_path.startswith(f"{normalized}/")
+
     def read(self, file_path: str, offset: int = 0, limit: int = 2000) -> ReadResult:
         if file_path not in self._files:
             # 失败: 填 error 字段, 而不是抛异常/返回裸字符串
             return ReadResult(error=f"Error: file not found: {file_path}")
-        return ReadResult(file_data=self._files[file_path])
+        fd = self._files[file_path]
+        lines = fd["content"].splitlines()
+        sliced = lines[offset:offset + limit if limit is not None else None]
+        file_data = FileData(
+            content="\n".join(sliced),
+            encoding=fd["encoding"],
+            created_at=fd["created_at"],
+            modified_at=fd["modified_at"],
+        )
+        return ReadResult(file_data=file_data)
 
     def write(self, file_path: str, content: str) -> WriteResult:
         # 协议语义: 写"新"文件, 已存在则报错 (不静默覆盖)
@@ -116,13 +132,19 @@ class InMemoryBackend(BackendProtocol):
 
     def glob(self, pattern: str, path: str | None = None) -> GlobResult:
         # 用 fnmatch 对已存路径做通配匹配
-        matches = [FileInfo(path=p) for p in sorted(self._files) if fnmatch.fnmatch(p, pattern)]
+        matches = [
+            FileInfo(path=p)
+            for p in sorted(self._files)
+            if self._is_under_path(p, path) and (fnmatch.fnmatch(p, pattern) or fnmatch.fnmatch(os.path.basename(p), pattern))
+        ]
         return GlobResult(matches=matches)
 
     def grep(self, pattern: str, path: str | None = None, glob: str | None = None) -> GrepResult:
         # 逐文件逐行做"字面子串"匹配 (协议规定 grep 是字面匹配, 不是正则)
         matches: list[GrepMatch] = []
         for p, fd in self._files.items():
+            if not self._is_under_path(p, path):
+                continue
             if glob is not None and not fnmatch.fnmatch(p, glob):
                 continue
             for i, line in enumerate(fd["content"].splitlines(), start=1):
@@ -165,6 +187,8 @@ if __name__ == "__main__":
 
     # write 成功 / 重复写报错
     assert backend.write("/notes.md", "hello\nTODO: fix bug\nbye").path == "/notes.md"
+    assert backend.write("/project-a/a.txt", "TODO: scoped").path == "/project-a/a.txt"
+    assert backend.write("/project-b/b.txt", "TODO: hidden").path == "/project-b/b.txt"
     assert backend.write("/notes.md", "x").error is not None, "重复写应报错"
 
     # read 命中 / 未命中
@@ -179,14 +203,19 @@ if __name__ == "__main__":
     e = backend.edit("/notes.md", "hello", "HELLO")
     assert e.error is None and e.occurrences == 1
     assert backend.read("/notes.md").file_data["content"].startswith("HELLO")
+    assert backend.read("/notes.md", offset=1, limit=1).file_data["content"] == "TODO: fix bug"
 
     # glob 通配匹配
     assert len(backend.glob("*.md").matches) == 1
     assert backend.glob("*.py").matches == []
+    project_a_matches = [m["path"] for m in backend.glob("*.txt", path="/project-a").matches]
+    assert project_a_matches == ["/project-a/a.txt"], project_a_matches
 
     # grep 字面搜索 (命中第 2 行的 TODO)
     g = backend.grep("TODO")
     assert g.matches[0]["line"] == 2 and "TODO" in g.matches[0]["text"]
+    scoped = backend.grep("TODO", path="/project-a")
+    assert [m["path"] for m in scoped.matches] == ["/project-a/a.txt"]
 
     # 自定义中间件可实例化, agent 能在 model=None 下把二者接进去
     agent_struct = build_agent(model=None)
