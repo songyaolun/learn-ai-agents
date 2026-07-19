@@ -216,16 +216,20 @@ async def main() -> None:
     joined = "".join(tokens)  # 拼回完整输出
     print(f"  收到 token 数: {len(tokens)}, 拼接结果: {joined!r}")
     # 替身给 writer 是「初稿 完成 了」、polish 是「润色 后 更 精炼」, 拼起来应含这两段
-    assert "初稿" in joined and "润色" in joined, "两个 LLM 的 token 都应被收到"
-    print("  断言通过: on_chat_model_stream 覆盖了 writer + polish 两个 LLM 的全部 token")
+    assert tokens and joined.strip(), "应收到非空 LLM token"
+    if not os.getenv("MODEL_ID"):
+        assert "初稿" in joined and "润色" in joined, "两个 fake LLM 的 token 都应被收到"
+    print("  断言通过: on_chat_model_stream 覆盖了 writer + polish 两个 LLM 的 token")
 
     # -- 演示 3: 按 tag 过滤, 只要 writer 那个 LLM --
     print("\n=== 演示3: 按 tags 过滤, 只收 llm_writer 的 token(不要 polish) ===")
     writer_tokens = await demo_filter_by_tag("llm_writer")
     writer_joined = "".join(writer_tokens)
     print(f"  llm_writer 拼接结果: {writer_joined!r}")
-    assert "初稿" in writer_joined, "应收到 writer 的 token"
-    assert "润色" not in writer_joined, "不应混入 polish 的 token(tag 过滤生效)"
+    assert writer_tokens and writer_joined.strip(), "应收到 writer 的非空 token"
+    if not os.getenv("MODEL_ID"):
+        assert "初稿" in writer_joined, "应收到 writer 的 fake token"
+        assert "润色" not in writer_joined, "不应混入 polish 的 token(tag 过滤生效)"
     print("  断言通过: tag 精确隔离了两个 LLM, 只拿到打了 llm_writer 标签的那一路")
 
     # -- 演示 4: 按 name 过滤单个节点的进出 --

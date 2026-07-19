@@ -214,7 +214,8 @@ async def chat_stream(q: str):
     # 复用本文件的 stream_as_sse 思路: 但注意 EventSourceResponse 只要事件"内容",
     # 帧格式(data:/\n\n)由它自己补, 所以这里 yield 归一化后的 JSON 字符串即可。
     async def event_gen():
-        for chunk in graph.stream({"question": q}, stream_mode="messages"):
+        chat_graph = _build_messages_graph(_make_chat_model())
+        for chunk in chat_graph.stream({"question": q}, stream_mode="messages"):
             payload = normalize_chunk("messages", chunk)
             yield json.dumps(payload, ensure_ascii=False)   # EventSourceResponse 会包成一帧
     return EventSourceResponse(event_gen())
@@ -242,7 +243,8 @@ app = FastAPI()
 @app.get("/chat/ndjson")
 async def chat_ndjson(q: str):
     def line_gen():
-        for chunk in graph.stream({"question": q}, stream_mode="messages"):
+        chat_graph = _build_messages_graph(_make_chat_model())
+        for chunk in chat_graph.stream({"question": q}, stream_mode="messages"):
             payload = normalize_chunk("messages", chunk)
             yield json.dumps(payload, ensure_ascii=False) + "\n"   # 每行一个 JSON + 换行
     # media_type 用 application/x-ndjson, 前端 fetch + ReadableStream 按 \n 切行 JSON.parse

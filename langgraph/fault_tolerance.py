@@ -196,9 +196,9 @@ if __name__ == "__main__":
     print("\n=== 第3节: durability 模式('sync'/'async'/'exit')语义 ===")
     print("  'sync' : 每个超步结束同步写盘, 持久性最强, 崩溃点前的进度绝不丢(本文件默认用它)")
     print("  'async': 后台异步写盘, 更快, 极端情况下可能丢最后一步")
-    print("  'exit' : 尽量攒到整体退出时再写盘, 吞吐最好")
-    # 实测: StateGraph+SqliteSaver 在崩溃退出时, 即便 'exit' 也会把已完成超步的 state 落盘,
-    # 恢复时上游节点同样不重跑。所以三种模式差别是"写多勤/多快", 不是"崩了会不会从头再来"。
+    print("  'exit' : 正常图运行结束/退出时再写盘, 吞吐最好; 不适合要求进程级崩溃中途保留每步进度的场景")
+    # 这里捕获的是 graph.invoke 抛出的普通 Python 异常, 图运行有机会正常退出并 flush。
+    # 这不是 kill -9/进程崩溃级别的中途恢复演示; 若要求每步级持久化, 生产应选 sync/async。
     node_calls["a"] = 0
     node_calls["b"] = 0
     crash_switch["should_crash"] = True
@@ -213,7 +213,7 @@ if __name__ == "__main__":
     print(f"  'exit' 模式崩溃后 checkpoint state: {snap_exit.values}, next: {snap_exit.next}")
     assert snap_exit.values.get("log") == ["a"], "exit 模式下 a 的结果同样已落盘"
     assert snap_exit.next == ("b",), "恢复点同样指向崩溃的 b"
-    print("  [断言通过] 即便 exit 模式, 已完成的 node_a 结果照样落盘, 恢复点指向 b(不会从头再来)")
+    print("  [断言通过] 对于被捕获的普通异常, exit 模式在运行退出时 flush, 恢复点指向 b")
     saver_c.conn.close()
 
     # 清理沙箱, 不在仓库目录留 db

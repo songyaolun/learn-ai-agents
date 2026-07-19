@@ -62,13 +62,13 @@ model = ChatAnthropic(
 
 ## 4. 无 MODEL_ID 时的降级运行(重要)
 
-当前示例设计为:**即使没有配置 `MODEL_ID` / `ANTHROPIC_API_KEY` 也能 `python 文件名.py` 跑通结构性逻辑**。
+本次新增并在 `test_examples.py` 覆盖的示例设计为:**即使没有配置 `MODEL_ID` / `ANTHROPIC_API_KEY` 也能跑通结构性逻辑**。较早的独立示例(如 `multi_agent.py`、`send_map_reduce.py`、`combo.py`、`store.py`)仍可能要求真实环境变量。
 
 - 检测到无 `MODEL_ID` 时,示例会自动降级,用**假模型替身**(`FakeListChatModel` / `GenericFakeChatModel` 等)代替真实 LLM。
 - 这样可在无密钥、无网络的环境下,验证图的核心机制:Send 分发 / reducer 合并 / checkpointer 落盘读回 / SQL 执行 / 向量检索本地部分 / 重试计数 / 事件序列结构等,均为真实执行并带断言,而非空壳。
 - 只有模型的自然语言"内容"是替身产出的;概念本身被真实演示。
 
-因此,你可以先不配 `.env` 直接运行,观察每个 `=== ... ===` 分节的可判定输出;等配好密钥后再运行同一文件,即可换成真实模型响应。
+因此,你可以先不配 `.env` 直接运行 README/测试列出的 fallback-enabled 示例,观察每个 `=== ... ===` 分节的可判定输出;等配好密钥后再运行同一文件,即可换成真实模型响应。
 
 联网搜索工具(`DuckDuckGoSearchRun`,仅 multi_agent.py 用到)在无网络时会失败,该示例的无密钥路径同样走替身,不依赖真实联网。
 

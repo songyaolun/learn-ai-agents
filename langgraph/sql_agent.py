@@ -243,14 +243,11 @@ if __name__ == "__main__":
         tool_msgs = [m for m in result["messages"] if isinstance(m, ToolMessage)]
         sql_ok = [m.content for m in tool_msgs if m.content.startswith("OK rows=")]
         # 宽松断言: 真实模型输出不确定, 只验证"确实调用了工具 + 真跑了 SQL + 答案沾边"。
-        if not tool_msgs:
-            # 罕见: 模型这轮没调工具。打清晰提示而非崩溃 (bind_tools 已绑定, 正常应会调)。
-            print("  [注意] 本轮真实模型未调用任何工具 (模型行为波动), 未执行 SQL。")
-        else:
-            assert sql_ok, f"应至少有一次 run_sql 成功执行, 实际工具结果: {[m.content for m in tool_msgs]}"
-            assert "Engineering" in final.content, f"最终答案应提到 Engineering, 实际: {final.content}"
-            print(f"  真跑 SQL 次数(成功): {len(sql_ok)}; 样例结果: {sql_ok[-1]}")
-            print("  通过: 真实模型 bind_tools→自行调工具→跑真实 SQL→作答, 答案命中 Engineering")
+        assert tool_msgs, "真实模型路径必须至少调用一次工具, 否则没有验证 SQL 工具循环"
+        assert sql_ok, f"应至少有一次 run_sql 成功执行, 实际工具结果: {[m.content for m in tool_msgs]}"
+        assert "Engineering" in final.content, f"最终答案应提到 Engineering, 实际: {final.content}"
+        print(f"  真跑 SQL 次数(成功): {len(sql_ok)}; 样例结果: {sql_ok[-1]}")
+        print("  通过: 真实模型 bind_tools→自行调工具→跑真实 SQL→作答, 答案命中 Engineering")
     else:
         # ================================================================
         # 离线替身路径: 预置脚本固定"模型决策", 离线确定性断言精确结果

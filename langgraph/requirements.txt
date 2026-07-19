@@ -11,6 +11,9 @@ langchain>=1.3.0,<2.0           # create_agent 等高层 agent 构造 (multi_age
 langchain-core>=1.4.0,<2.0      # 消息类型、@tool、Runnable、FakeChatModel 替身; 也自带 RAG 本地件 (见 B2 说明)
 langchain-anthropic>=1.4.0,<2.0 # ChatAnthropic: 统一模型接入, model_id/base_url/key 全走 .env
 
+# --- 测试 ---
+pytest>=8.0.0,<9.0              # 运行 test_examples.py 的测试 runner
+
 # --- 配置 ---
 python-dotenv>=1.2.0            # load_dotenv(override=True) 读取 .env
 

@@ -217,9 +217,17 @@ if __name__ == "__main__":
 
     print("\n=== 等价性断言: 同一输入, 两种写法产出等价结果 ===")
     # 逐字段比对: 证明这是"同一业务逻辑"的两种表达, 而非两个不同功能
-    for key in ("draft", "review", "final", "steps"):
-        assert out_a[key] == out_b[key], f"字段 {key} 两种实现应完全一致: {out_a[key]!r} != {out_b[key]!r}"
-    print("  draft/review/final/steps 四字段逐一比对通过 -> 两种 API 是同一逻辑的两种写法")
+    if os.getenv("MODEL_ID"):
+        # 真实模型会被调用两次, 文案可能不逐字相同; 只校验稳定结构与流程。
+        assert out_a["steps"] == out_b["steps"], "两种实现的步骤轨迹应一致"
+        for key in ("draft", "review", "final"):
+            assert isinstance(out_a[key], str) and out_a[key].strip(), f"Graph 版 {key} 应有非空文本"
+            assert isinstance(out_b[key], str) and out_b[key].strip(), f"Functional 版 {key} 应有非空文本"
+        print("  真实模型路径: steps 一致, draft/review/final 均为非空文本")
+    else:
+        for key in ("draft", "review", "final", "steps"):
+            assert out_a[key] == out_b[key], f"字段 {key} 两种实现应完全一致: {out_a[key]!r} != {out_b[key]!r}"
+        print("  fake 模型路径: draft/review/final/steps 四字段逐一比对通过")
 
     print("\n=== 持久化对照: 两者底层都是 Pregel, 都能用 checkpointer 读回状态 ===")
     # Graph 版: get_state().values 是整份共享 State

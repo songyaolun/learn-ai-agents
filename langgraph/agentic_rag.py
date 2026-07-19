@@ -40,18 +40,21 @@ retrieve↔grade↔rewrite 之间形成一个真实的循环, 而不是走完一
 import os
 from typing import TypedDict
 
+from dotenv import load_dotenv
+
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
 from langchain_core.vectorstores import InMemoryVectorStore
 from langgraph.graph import END, START, StateGraph
 
+# 先读取 .env, 再判断是否有模型配置; 否则只写在 .env 的 MODEL_ID 不会生效。
+load_dotenv(override=True)
+
 # 有密钥才导入 ChatAnthropic; 无密钥时下面走规则替身, 不 import 也不报错
 HAS_MODEL = bool(os.getenv("MODEL_ID"))
 if HAS_MODEL:
-    from dotenv import load_dotenv
     from langchain_anthropic import ChatAnthropic
 
-    load_dotenv(override=True)
     model = ChatAnthropic(
         model=os.environ["MODEL_ID"],
         base_url=os.getenv("ANTHROPIC_BASE_URL") or None,
@@ -114,7 +117,11 @@ class RagState(TypedDict):
 # ============================================================
 def retrieve(state: RagState) -> dict:
     """向量检索: 用当前 question 去样例库做 similarity_search(真实执行的向量检索)。"""
-    docs = vector_store.similarity_search(state["question"], k=2)  # 取相似度 top-2
+    docs = vector_store.similarity_search(state["question"], k=2)  # 真实模型路径取相似度 top-2
+    if not HAS_MODEL:
+        # 假 embedding 排序不具备语义稳定性; 离线路径把全部样例交给规则 grade，
+        # 保证任一 seeded 文档的关键词问题都能被确定性识别。
+        docs = DOCS
     return {"documents": docs}
 
 

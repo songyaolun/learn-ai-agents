@@ -157,10 +157,11 @@ if __name__ == "__main__":
     print(f"  invoke(20) 返回={r2} (=value=本次增量), 本次 runtime 注入 previous={SEEN_PREVIOUS[-1]} (=上次 save=累计)")
     assert r2 == 20, "返回值 (value) 仍是本次增量, 不是累计值 —— 这就是 value/save 分离"
     assert SEEN_PREVIOUS[-1] == 10, "第二次的 previous 应为上一次 save 的累计值 10"
-    # get_state().values 拿到的是最近一次的 value (=20), 印证 value 与 save 是两份不同的东西
+    # get_state().values 拿到的是最近一次 checkpoint 保存的 save (=30),
+    # 而 invoke 返回的是 final(value=delta) 中暴露给调用方的 value (=20)。
     latest_value = accumulator.get_state(cfg).values
-    print(f"  get_state().values={latest_value} (=最近一次 value, 不是 save 的累计值 30)")
-    assert latest_value == 20, "get_state().values 返回的是 value 而非 save, 二者被 final 明确分离"
+    print(f"  get_state().values={latest_value} (=save 的累计值 30, 供下次 previous 使用)")
+    assert latest_value == 30, "get_state().values 返回的是 save 的累计值, 而 invoke 返回 value"
 
     # 换一个全新 thread_id: previous 又回到 None, 累计从头开始, 互不干扰
     cfg_new = {"configurable": {"thread_id": "acc-2"}}
