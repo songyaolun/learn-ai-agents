@@ -16,3 +16,7 @@ dependencies = [
     "langgraph-checkpoint-sqlite>=3.1.0",
     "python-dotenv>=1.2.2",
 ]
+
+[tool.pytest.ini_options]
+# ch_ 前缀的测试文件也需要被 pytest 发现
+python_files = ["test_*.py", "ch_*_test_*.py"]

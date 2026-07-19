@@ -15,7 +15,7 @@ cp .env.example .env
 # 编辑 .env,填入 MODEL_ID / ANTHROPIC_BASE_URL / ANTHROPIC_API_KEY
 
 # 2. 用 uv 跑任意示例 (uv 会按需自动解析并安装依赖到项目虚拟环境)
-uv run python deepagents/quickstart.py
+uv run python deepagents/ch_01_quickstart.py
 ```
 
 <details>
@@ -26,7 +26,7 @@ uv run python deepagents/quickstart.py
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r deepagents/requirements.txt
 cp .env.example .env   # .env.example 在仓库根目录
-python deepagents/quickstart.py
+python deepagents/ch_01_quickstart.py
 ```
 
 </details>
@@ -40,60 +40,62 @@ python deepagents/quickstart.py
 
 ## 目录索引
 
+> 文件名前缀 `ch_NN_` 即推荐阅读顺序:原始模板(01-10) → A 组(11-15) → B 组(16-22) → C 组(23-24) → D 组(25-29)。
+
 ### 原始模板(仓库自带,作为对比基准)
 
 | 文件 | 主题 |
 |------|------|
-| `deepagents/quickstart.py` | 最小可用 deep agent(model + tools + subagents) |
-| `deepagents/research.py` | 接入 DuckDuckGo 真实搜索的研究型 agent |
-| `deepagents/filesystem.py` | 默认虚拟文件系统(StateBackend) |
-| `deepagents/backend.py` | 换 FilesystemBackend 落真实磁盘 |
-| `deepagents/permissions.py` | 文件工具的路径级权限(allow/deny + 新增 interrupt 段) |
-| `deepagents/hitl.py` | 内置 `interrupt_on` 人工审批(approve/reject) |
-| `deepagents/stream.py` | 观察中间执行过程(stream v2) |
-| `deepagents/structured_output.py` | `response_format` 结构化输出 |
-| `deepagents/skills_memory.py` | skills 技能库 + memory(AGENTS.md) |
-| `deepagents/combo.py` | 综合示例:委派 + 落盘 + 审批 + 结构化 |
+| `deepagents/ch_01_quickstart.py` | 最小可用 deep agent(model + tools + subagents) |
+| `deepagents/ch_02_research.py` | 接入 DuckDuckGo 真实搜索的研究型 agent |
+| `deepagents/ch_03_filesystem.py` | 默认虚拟文件系统(StateBackend) |
+| `deepagents/ch_04_backend.py` | 换 FilesystemBackend 落真实磁盘 |
+| `deepagents/ch_05_permissions.py` | 文件工具的路径级权限(allow/deny + 新增 interrupt 段) |
+| `deepagents/ch_06_hitl.py` | 内置 `interrupt_on` 人工审批(approve/reject) |
+| `deepagents/ch_07_stream.py` | 观察中间执行过程(stream v2) |
+| `deepagents/ch_08_structured_output.py` | `response_format` 结构化输出 |
+| `deepagents/ch_09_skills_memory.py` | skills 技能库 + memory(AGENTS.md) |
+| `deepagents/ch_10_combo.py` | 综合示例:委派 + 落盘 + 审批 + 结构化 |
 
 ### A 组 —— 执行环境与上下文管理
 
 | 文件 | 主题 | 运行分级 |
 |------|------|----------|
-| `deepagents/sandbox_backend.py` | 隔离/远程沙箱 backend 概念(vs 同机磁盘) | 结构验证通过(沙箱服务需外部,骨架) |
-| `deepagents/interpreter.py` | 代码解释器式执行(LocalShellBackend 跑有限计算) | 结构验证通过 |
-| `deepagents/context_offloading.py` | 把大块中间产物卸载到文件、消息里只留指针 | 降级-骨架(卸载行为由模型驱动) |
-| `deepagents/summarization.py` | 自动摘要压缩 + `compact_conversation` 工具 | 结构验证通过 |
-| `deepagents/store_memory.py` | `StoreBackend` 跨线程持久记忆 | 结构验证通过 |
+| `deepagents/ch_11_sandbox_backend.py` | 隔离/远程沙箱 backend 概念(vs 同机磁盘) | 结构验证通过(沙箱服务需外部,骨架) |
+| `deepagents/ch_12_interpreter.py` | 代码解释器式执行(LocalShellBackend 跑有限计算) | 结构验证通过 |
+| `deepagents/ch_13_context_offloading.py` | 把大块中间产物卸载到文件、消息里只留指针 | 降级-骨架(卸载行为由模型驱动) |
+| `deepagents/ch_14_summarization.py` | 自动摘要压缩 + `compact_conversation` 工具 | 结构验证通过 |
+| `deepagents/ch_15_store_memory.py` | `StoreBackend` 跨线程持久记忆 | 结构验证通过 |
 
 ### B 组 —— 委派与定制
 
 | 文件 | 主题 | 运行分级 |
 |------|------|----------|
-| `deepagents/runtime_context.py` | `context_schema` + 工具读运行时上下文 | 结构验证通过 |
-| `deepagents/prompt_caching.py` | Anthropic 提示词缓存(降本增速) | 结构验证通过(缓存命中不可客户端断言) |
-| `deepagents/async_subagents.py` | `AsyncSubAgent` 远端 LangGraph 服务子 agent | 降级-骨架(需远端服务) |
-| `deepagents/compiled_subagent.py` | `CompiledSubAgent` 用预构建 runnable 当子 agent | 结构验证通过 |
-| `deepagents/custom_backend_middleware.py` | 自定义 `BackendProtocol` 后端 + 自定义中间件 | 结构验证通过 |
-| `deepagents/multimodal.py` | 向 agent 传图片等多模态内容 | 降级-骨架(需视觉模型) |
-| `deepagents/profiles.py` | `HarnessProfile` / `ProviderProfile` 定制框架注入 | 结构验证通过 |
+| `deepagents/ch_16_runtime_context.py` | `context_schema` + 工具读运行时上下文 | 结构验证通过 |
+| `deepagents/ch_17_prompt_caching.py` | Anthropic 提示词缓存(降本增速) | 结构验证通过(缓存命中不可客户端断言) |
+| `deepagents/ch_18_async_subagents.py` | `AsyncSubAgent` 远端 LangGraph 服务子 agent | 降级-骨架(需远端服务) |
+| `deepagents/ch_19_compiled_subagent.py` | `CompiledSubAgent` 用预构建 runnable 当子 agent | 结构验证通过 |
+| `deepagents/ch_20_custom_backend_middleware.py` | 自定义 `BackendProtocol` 后端 + 自定义中间件 | 结构验证通过 |
+| `deepagents/ch_21_multimodal.py` | 向 agent 传图片等多模态内容 | 降级-骨架(需视觉模型) |
+| `deepagents/ch_22_profiles.py` | `HarnessProfile` / `ProviderProfile` 定制框架注入 | 结构验证通过 |
 
 ### C 组 —— 权限与人工介入
 
 | 文件 | 主题 | 运行分级 |
 |------|------|----------|
-| `deepagents/permissions.py` | (原地扩展)新增 `mode="interrupt"` 路径需人工审批 | 结构验证通过 + 模型场景守卫 |
-| `deepagents/hitl_edit_respond.py` | HITL 的 `edit` / `respond` 决策(hitl.py 只演示了 approve/reject) | 结构验证通过 |
-| `deepagents/conditional_interrupt.py` | `InterruptOnConfig.when` 条件式审批 + stream v3 事件骨架 | 结构验证通过(v3 部分为 beta 骨架) |
+| `deepagents/ch_05_permissions.py` | (原地扩展)新增 `mode="interrupt"` 路径需人工审批 | 结构验证通过 + 模型场景守卫 |
+| `deepagents/ch_23_hitl_edit_respond.py` | HITL 的 `edit` / `respond` 决策(ch_06_hitl.py 只演示了 approve/reject) | 结构验证通过 |
+| `deepagents/ch_24_conditional_interrupt.py` | `InterruptOnConfig.when` 条件式审批 + stream v3 事件骨架 | 结构验证通过(v3 部分为 beta 骨架) |
 
 ### D 组 —— 生产与生态文档 + shell 后端
 
 | 文件 | 主题 |
 |------|------|
-| `deepagents/going_to_production.md` | 上生产:持久化、审批门、权限沙箱、可观测、成本 |
-| `deepagents/dcode.md` | Deep Agents Code CLI 简介 |
-| `deepagents/acp.md` | Agent Client Protocol(ACP)与 deepagents 的关系 |
-| `deepagents/vs_claude_agent_sdk.md` | DeepAgents vs Claude Agent SDK 对比 |
-| `deepagents/local_shell_backend.py` | `LocalShellBackend` 真实 shell `execute` 工具(沙箱在临时目录) | 结构验证通过 |
+| `deepagents/ch_26_going_to_production.md` | 上生产:持久化、审批门、权限沙箱、可观测、成本 |
+| `deepagents/ch_27_dcode.md` | Deep Agents Code CLI 简介 |
+| `deepagents/ch_28_acp.md` | Agent Client Protocol(ACP)与 deepagents 的关系 |
+| `deepagents/ch_29_vs_claude_agent_sdk.md` | DeepAgents vs Claude Agent SDK 对比 |
+| `deepagents/ch_25_local_shell_backend.py` | `LocalShellBackend` 真实 shell `execute` 工具(沙箱在临时目录) | 结构验证通过 |
 
 ## 安全约定(所有示例遵守)
 

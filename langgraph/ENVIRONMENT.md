@@ -62,7 +62,7 @@ model = ChatAnthropic(
 
 ## 4. 无 MODEL_ID 时的降级运行(重要)
 
-本次新增并在 `test_examples.py` 覆盖的示例设计为:**即使没有配置 `MODEL_ID` / `ANTHROPIC_API_KEY` 也能跑通结构性逻辑**。较早的独立示例(如 `multi_agent.py`、`send_map_reduce.py`、`combo.py`、`store.py`)仍可能要求真实环境变量。
+本次新增并在 `ch_20_test_examples.py` 覆盖的示例设计为:**即使没有配置 `MODEL_ID` / `ANTHROPIC_API_KEY` 也能跑通结构性逻辑**。较早的独立示例(如 `ch_12_multi_agent.py`、`ch_11_send_map_reduce.py`、`ch_14_combo.py`、`ch_06_store.py`)仍可能要求真实环境变量。
 
 - 检测到无 `MODEL_ID` 时,示例会自动降级,用**假模型替身**(`FakeListChatModel` / `GenericFakeChatModel` 等)代替真实 LLM。
 - 这样可在无密钥、无网络的环境下,验证图的核心机制:Send 分发 / reducer 合并 / checkpointer 落盘读回 / SQL 执行 / 向量检索本地部分 / 重试计数 / 事件序列结构等,均为真实执行并带断言,而非空壳。
@@ -70,7 +70,7 @@ model = ChatAnthropic(
 
 因此,你可以先不配 `.env` 直接运行 README/测试列出的 fallback-enabled 示例,观察每个 `=== ... ===` 分节的可判定输出;等配好密钥后再运行同一文件,即可换成真实模型响应。
 
-联网搜索工具(`DuckDuckGoSearchRun`,仅 multi_agent.py 用到)在无网络时会失败,该示例的无密钥路径同样走替身,不依赖真实联网。
+联网搜索工具(`DuckDuckGoSearchRun`,仅 ch_12_multi_agent.py 用到)在无网络时会失败,该示例的无密钥路径同样走替身,不依赖真实联网。
 
 ## 5. 运行示例
 
@@ -78,13 +78,13 @@ model = ChatAnthropic(
 
 ```bash
 cd langgraph
-python quickstart.py          # 最小可运行图 + create_agent 入门
-python persistence.py         # checkpointer 持久化
-python send_map_reduce.py     # Send 动态 fan-out / map-reduce
-python multi_agent.py         # supervisor + worker 多 agent
-python functional_api.py      # @entrypoint / @task 函数式 API
-python streaming.py           # 流式输出
-python fault_tolerance.py     # RetryPolicy 容错
+python ch_01_quickstart.py          # 最小可运行图 + create_agent 入门
+python ch_05_persistence.py         # checkpointer 持久化
+python ch_11_send_map_reduce.py     # Send 动态 fan-out / map-reduce
+python ch_12_multi_agent.py         # supervisor + worker 多 agent
+python ch_03_functional_api.py      # @entrypoint / @task 函数式 API
+python ch_15_streaming.py           # 流式输出
+python ch_09_fault_tolerance.py     # RetryPolicy 容错
 ```
 
 ## 6. 官方文档

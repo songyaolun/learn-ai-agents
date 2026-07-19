@@ -18,5 +18,5 @@ dist/
 chainlit.db
 .chainlit/
 
-# langgraph sqlite checkpoint (langgraph/persistence.py 生成)
+# langgraph sqlite checkpoint (langgraph/ch_05_persistence.py 生成)
 langgraph_checkpoints.db
