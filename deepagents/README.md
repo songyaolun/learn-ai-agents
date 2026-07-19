@@ -57,6 +57,8 @@ python deepagents/ch_01_quickstart.py
 | `deepagents/ch_09_skills_memory.py` | skills 技能库 + memory(AGENTS.md) |
 | `deepagents/ch_10_combo.py` | 综合示例:委派 + 落盘 + 审批 + 结构化 |
 
+> 📓 [`ch_01_quickstart.qa.md`](ch_01_quickstart.qa.md):精读 `ch_01_quickstart.py` 时深挖 `create_deep_agent`/`create_agent`/LangGraph 源码整理的问答记录(invoke 语义、middleware 生命周期、`task` 工具的任务转交与结果回传、子 agent 的并行与人工审批、middleware 顺序管理等),附源码文件路径与行号。
+
 ### A 组 —— 执行环境与上下文管理
 
 | 文件 | 主题 | 运行分级 |

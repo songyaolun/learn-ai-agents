@@ -45,7 +45,7 @@ def get_weather(city: str) -> str:
 agent = create_deep_agent(
     model=model,
     tools=[get_weather],
-    system_prompt="You are a helpful research assistant.",
+    system_prompt="You are a helpful research assistant. Please answer questions in the user's language.",
     subagents=[
         {
             "name": "researcher",
@@ -65,8 +65,8 @@ if __name__ == "__main__":
                 {
                     "role": "user",
                     "content": (
-                        "What's the weather in San Francisco? "
-                        "Then briefly research why SF has this kind of climate."
+                        "San Francisco的天气如何？"
+                        "然后简单研究一下为什么旧金山会有这样的天气。"
                     ),
                 }
             ]
