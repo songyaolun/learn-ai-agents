@@ -91,11 +91,21 @@ python deepagents/ch_01_quickstart.py
 
 | 文件 | 主题 |
 |------|------|
+| `deepagents/ch_25_local_shell_backend.py` | `LocalShellBackend` 真实 shell `execute` 工具(沙箱在临时目录) | 结构验证通过 |
 | `deepagents/ch_26_going_to_production.md` | 上生产:持久化、审批门、权限沙箱、可观测、成本 |
 | `deepagents/ch_27_dcode.md` | Deep Agents Code CLI 简介 |
 | `deepagents/ch_28_acp.md` | Agent Client Protocol(ACP)与 deepagents 的关系 |
 | `deepagents/ch_29_vs_claude_agent_sdk.md` | DeepAgents vs Claude Agent SDK 对比 |
-| `deepagents/ch_25_local_shell_backend.py` | `LocalShellBackend` 真实 shell `execute` 工具(沙箱在临时目录) | 结构验证通过 |
+
+## 推荐学习路径
+
+> 文件名前缀 `ch_NN_` 与本节顺序一一对应。
+
+1. **入门模板**:`ch_01_quickstart.py` → `ch_02_research.py` → `ch_03_filesystem.py` → `ch_04_backend.py` → `ch_05_permissions.py` → `ch_06_hitl.py` → `ch_07_stream.py` → `ch_08_structured_output.py` → `ch_09_skills_memory.py` → `ch_10_combo.py`(最小可用 → 联网研究 → 文件系统 → 落盘 → 权限 → 审批 → 流式 → 结构化 → 技能/记忆 → 综合)
+2. **执行环境与上下文(A 组)**:`ch_11_sandbox_backend.py` → `ch_12_interpreter.py` → `ch_13_context_offloading.py` → `ch_14_summarization.py` → `ch_15_store_memory.py`
+3. **委派与定制(B 组)**:`ch_16_runtime_context.py` → `ch_17_prompt_caching.py` → `ch_18_async_subagents.py` → `ch_19_compiled_subagent.py` → `ch_20_custom_backend_middleware.py` → `ch_21_multimodal.py` → `ch_22_profiles.py`
+4. **权限与人工介入进阶(C 组)**:`ch_23_hitl_edit_respond.py` → `ch_24_conditional_interrupt.py`
+5. **生产与生态(D 组)**:`ch_25_local_shell_backend.py` → `ch_26_going_to_production.md` → `ch_27_dcode.md` → `ch_28_acp.md` → `ch_29_vs_claude_agent_sdk.md`
 
 ## 安全约定(所有示例遵守)
 
