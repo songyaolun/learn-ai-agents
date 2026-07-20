@@ -203,3 +203,158 @@ LangChain 的 `AgentMiddleware` **没有自动依赖解析**(不支持声明 `de
 - `PatchToolCallsMiddleware`(修补异常工具调用格式)排在 base stack 末尾、早于 `HumanInTheLoopMiddleware`(tail stack),这样人工审批看到的是已修补的合法调用,而非原始可能格式错误的调用
 
 真实做法:**没有框架帮你解依赖,靠约定 + 文档**——把强依赖关系写清楚、给一个安全插入槽位,而不是搞 `@Order(n)` 或拓扑排序。自己写 middleware 有依赖时同样只能:① 在注释里写明谁必须在谁前面;② 让每个 middleware 职责单一、减少互相依赖(回到 SOLID 单一职责——依赖越少,顺序问题越少)。
+
+---
+
+## Q8. 自己写的脚本 `from deepagents import create_deep_agent` 报 `ImportError: cannot import name 'create_deep_agent' from partially initialized module 'deepagents' (most likely due to a circular import)`,是什么问题?
+
+**根因**:脚本文件本身也叫 `deepagents.py`,和要导入的第三方包 `deepagents` 同名。Python 运行脚本时会把脚本所在目录塞进 `sys.path` 最前面,`import deepagents`/`from deepagents import ...` 优先匹配到同目录下的这个脚本自己,而不是 site-packages 里的第三方包——脚本执行到 `from deepagents import create_deep_agent` 这行,"deepagents" 解析成了它自己,而它自己还没执行完(正卡在这行导入语句上,`create_deep_agent` 这个名字根本没定义过),于是形成循环导入。
+
+**解决**:给脚本改名,不要跟要导入的顶级包同名(比如 `deepagents.py` → `deepagents_demo.py`,并清掉旧的 `__pycache__`,否则残留的 `.pyc` 还是按旧模块名缓存的)。这和仓库 `web/app.py` 不 import 同名 `langchain/`/`langgraph/` 目录是同一类"本地文件/目录遮蔽同名 pip 包"问题(参见根 `CLAUDE.md` 的 `web/app.py` 那段说明)。
+
+---
+
+## Q9. `agent.invoke({"input": "..."})` 报 `anthropic.BadRequestError: ... messages must not be empty`,为什么?
+
+**根因**:`create_deep_agent` 编译出的图,状态(state)里约定的输入 channel 是 `messages`,不是 `input`——对照 Q1 里贴的 `output_channels`/`input_channels` 结构,整张图从 `__start__` 起就是按 `messages` 这个字段驱动的。传 `{"input": "..."}` 时,graph state 里的 `messages` 字段是空列表,请求最终发到 Anthropic API 时 `payload["messages"]` 自然是空的,被服务端直接拒绝(`invalid params, messages must not be empty`)。
+
+**正确写法**:
+
+```python
+agent.invoke({
+    "messages": [{"role": "user", "content": "What's the weather in New York?"}]
+})
+```
+
+---
+
+## Q10. `print(result)` 打印出来的不是标准 JSON,解析不了,为什么?怎么转成 JSON?
+
+**根因**:`result` 是普通 Python dict,但 `result["messages"]` 里装的是 LangChain 的消息对象(`HumanMessage`/`AIMessage`/`ToolMessage`,继承自 Pydantic v2 `BaseModel`),deep agent 的 state 还会带 `todos`/`files` 等字段。`print()` 对这些对象走的是 `repr()`,输出的是 Python 对象表示法(单引号、无引号 key、大写的 `None`/`True`),不是 JSON 语法,所以 `json.loads` 解析不了。
+
+**只是想看着方便(调试用)**:
+
+```python
+for msg in result["messages"]:
+    msg.pretty_print()
+```
+
+**确实需要标准 JSON**:消息对象是 Pydantic 模型,用 `model_dump(mode="json")` 递归转换成纯 JSON 兼容的 dict:
+
+```python
+import json
+
+serializable = {
+    k: [m.model_dump(mode="json") for m in v] if k == "messages" else v
+    for k, v in result.items()
+}
+print(json.dumps(serializable, indent=2, ensure_ascii=False))
+```
+
+---
+
+## Q11. `uv run` 跑的脚本能在 VSCode 里断点调试吗?
+
+**可以**。VSCode 的 Python 调试靠 `debugpy`,只要指定对解释器路径即可——`uv sync` 本质上只是往 `.venv/` 装了一个标准 venv,`uv run` 只是"用这个 venv 的解释器跑脚本"的命令行简写,并不神秘,调试不需要真的经过 `uv run` 这条命令。
+
+仓库 `.vscode/launch.json` 已经配好一份可直接用的配置:
+
+```json
+{
+    "name": "Python: Current File (uv)",
+    "type": "debugpy",
+    "request": "launch",
+    "program": "${file}",
+    "python": "${workspaceFolder}/.venv/bin/python3",
+    "console": "integratedTerminal",
+    "cwd": "${workspaceFolder}"
+}
+```
+
+直接指向 `uv sync` 生成的 `.venv/bin/python3`,效果等价于 `uv run`。打开要调试的文件、打断点、按 F5(或调试面板选这个配置)即可单步、看变量、进函数。注意 `program` 用的是 `${file}`,即当前编辑器里聚焦的文件,调试前要确认焦点在目标脚本的标签页上。
+
+---
+
+## Q12. VSCode 调试器变量面板里几乎每个对象都有 `Special variables` 和 `function variables` 分组,这正常吗?
+
+**正常**,这是 `debugpy` 对**任何有一定复杂度的 Python 对象**的通用展示行为,不是某个对象特有的:
+
+- **`Special variables`**:前后双下划线包裹的 dunder 属性/方法(`__class__`/`__dict__`/`__doc__`/`__module__`/`__weakref__` 等),几乎所有自定义类实例天生都有,跟业务逻辑无关,折叠起来眼不见心不烦
+- **`function variables`**:对象上挂的方法(bound method),跟"数据"属性区分开
+- 如果查看的是类本身(不是实例),还会多一组 **`class variables`**,展示类级别共享属性
+
+内置简单类型(`int`/`str`/`list`)一般不会出现这两个分组或非常精简,因为没有自定义方法/dunder 属性需要归类;像 `CompiledStateGraph` 这种第三方库的复杂对象则几乎一定会有。调试时一般直接忽略这两个分组,重点看剩下平铺的、真正有信息量的实例属性(比如 `channels`/`checkpointer`/`nodes`)。
+
+---
+
+## Q13. 想看 `agent` 里实际配置的 system prompt、tools、子 agent,应该在调试器哪里看?
+
+直接展开 `agent` 的调试器变量树基本看不出这三样——它们要么被编译进图节点的运行时闭包里(调试器摊不开这层),要么是真正发请求那一刻才拼出来的字符串。两条实际有效的路径:
+
+**方法一:Debug Console 直接求值,查工具/子 agent 列表**
+
+在 `agent = create_deep_agent(...)` 之后打断点,停住后切到 VSCode 底部 Debug Console,输入表达式主动求值(不是翻变量树):
+
+```python
+list(agent.nodes["tools"].bound.tools_by_name.keys())
+```
+
+`agent.nodes["tools"]` 是个 `PregelNode`,`.bound` 才是真正的 `langgraph.prebuilt.tool_node.ToolNode` 实例(验证见下方 Q14 的 `tool_node.py:781`),它的 `tools_by_name` 属性就是完整工具字典,能看到内置工具(`write_todos`/`ls`/`read_file`/`write_file`/`edit_file`/`glob`/`grep`/`execute`/`task`)加上自己传的工具。
+
+```python
+agent.nodes["tools"].bound.tools_by_name["task"].description
+```
+
+`task` 就是子 agent 委派入口(实现见 Q3),它的 `description` 里会完整列出当前配置了哪些 `subagent_type` 可选——没通过 `subagents=[...]` 传自定义子代理时,只有 deepagents 默认的 `general-purpose` 一个。
+
+**方法二:断点在真正发请求的地方,看精确的 system prompt**
+
+model 节点在图里是个 `RunnableCallable` 闭包,调试器展开不出 system prompt 字符串本体。但最可靠的位置是 `langchain_anthropic/chat_models.py:1797`(`_generate` 方法内):
+
+```python
+payload = self._get_request_payload(messages, stop=stop, **kwargs)
+```
+
+在这行后打断点,`payload` 这个 dict 就是**真正发给 Anthropic API 的原始请求**(`_get_request_payload` 定义于 `chat_models.py:1234`,组装 `payload["system"]` 在 `chat_models.py:1308`):
+
+- `payload["system"]` —— 最终拼好的 system prompt 全文(deepagents 自动生成的基础提示词 + 自定义 `system_prompt`,都在这里)
+- `payload["messages"]` —— 完整对话历史
+- `payload["tools"]` —— 实际绑定的工具 schema,含 `task` 工具定义
+
+每次调用模型都会重新经过这个 `_generate`,包括每个被 `task` 工具唤起的子 agent 自己的一轮循环——断点会命中多次,主 agent 一次、每个子 agent 各一次,正好能对比子 agent 的 system prompt 和主 agent 有什么不同。
+
+---
+
+## Q14. 为什么随便写个函数就能注册成 tool?这个 tool 没有约束吗?靠什么"声明"它是一个工具?
+
+**不是完全没约束,只是约束是隐式的**(靠 Python 自身的类型标注 + docstring 反射推断),不是靠一个额外的装饰器/注解语法显式声明的。
+
+**背后发生了什么**:`create_deep_agent(tools=[get_weather])` 传进去的裸函数,最终在 `langchain/agents/factory.py` 里被分流(`factory.py:1052-1053`:`built_in_tools = [t for t in tools if isinstance(t, dict)]` / `regular_tools = [t for t in tools if not isinstance(t, dict)]`),连同 middleware 注入的工具一起塞进 `ToolNode(tools=available_tools, ...)`(`factory.py:1060-1075`)。`ToolNode.__init__` 内部对每个非 `BaseTool` 的普通函数,会调用(`langgraph/prebuilt/tool_node.py:781`):
+
+```python
+tool_ = create_tool(cast("type[BaseTool]", tool))
+```
+
+`create_tool` 就是 `from langchain_core.tools import tool as create_tool`——和手写 `@tool` 装饰器是**同一个函数**,只是这里是程序化调用而非装饰器语法。也就是说,LangGraph/LangChain 确实"自动帮你套了一层",但套的是标准转换流程,不是没有规则的黑箱。
+
+**它靠什么"推断"出工具定义**:`langchain_core/tools/convert.py` 里 `tool()` 默认 `infer_schema=True`(`convert.py:306-307`),会调用 `StructuredTool.from_function(func, ...)`,从函数签名反射出三样东西:
+
+| 工具的哪部分 | 来自函数的什么 |
+|---|---|
+| 工具名(模型看到的 name) | `func.__name__` |
+| 工具描述(模型看到的 description) | 函数的 **docstring** |
+| 参数 schema(模型看到的 JSON Schema) | 函数签名的**类型标注**(如 `city: str`),自动生成一个隐式 Pydantic 模型 |
+
+`city: str` 这个类型标注,本质上就充当了"类似注解的东西"——只不过它不是专门为"声明工具"发明的语法,而是复用了 Python 原生的类型提示 + docstring,靠反射(`inspect`/`typing.get_type_hints`)自动转成 Anthropic API 要求的 tool schema(`name`/`description`/`input_schema`)。
+
+**真实存在的硬性检查**(`convert.py:322-325`):
+
+```python
+if dec_func.__doc__ is None:
+    msg = "Function must have a docstring if description not provided and infer_schema is False."
+    raise ValueError(msg)
+```
+
+只在 `infer_schema=False` 且没传 `description` 时才会真的报错;默认 `infer_schema=True` 分支不会硬性报错,但没有 docstring 时模型拿到的工具描述是空的——LLM 不知道这个工具是干嘛的,大概率瞎调用或干脆不用。类似地,没写类型标注的参数,反射出来的 schema 会退化成无类型约束,模型不知道该传什么类型。
+
+**结论**:确实"随便一个函数"能被塞进 `tools=[...]` 不报错,但工具质量完全取决于函数名(→工具名)、docstring(→描述)、参数类型标注(→参数 schema)写得规不规范——仓库里所有示例函数都规规矩矩写了类型标注 + 单行 docstring,不是巧合,是这套隐式推断机制的最低标准。想要更严格的控制(比如复杂参数校验),可以显式用 `@tool` 装饰器 + `args_schema=` 传自定义 Pydantic 模型,本质是同一套底层机制,只是把控制权交还给自己。

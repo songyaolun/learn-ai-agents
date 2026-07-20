@@ -47,7 +47,7 @@ python deepagents/ch_01_quickstart.py
 | 文件 | 主题 |
 |------|------|
 | `deepagents/ch_01_quickstart.py` | 最小可用 deep agent(model + tools + subagents) |
-| `deepagents/ch_02_research.py` | 接入 DuckDuckGo 真实搜索的研究型 agent |
+| `deepagents/ch_02_research.py` | 接入 Tavily 真实搜索的研究型 agent |
 | `deepagents/ch_03_filesystem.py` | 默认虚拟文件系统(StateBackend) |
 | `deepagents/ch_04_backend.py` | 换 FilesystemBackend 落真实磁盘 |
 | `deepagents/ch_05_permissions.py` | 文件工具的路径级权限(allow/deny + 新增 interrupt 段) |

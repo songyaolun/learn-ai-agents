@@ -1,15 +1,15 @@
-"""DeepAgents research —— 接入 DuckDuckGo 真实搜索, 做一个 deep research agent。
+"""DeepAgents research —— 接入 Tavily 真实搜索, 做一个 deep research agent。
 
 对比 deepagents/ch_01_quickstart.py: 那里用模拟的 get_weather 工具, 这里接真实搜索引擎,
 DeepAgents 的 planning + subagent 在真实多步研究任务上才真正发挥价值。
-DuckDuckGo 无需 API key, 适合本地学习。
+Tavily 需要 API key（.env 里配置 TAVILY_API_KEY, 在 https://www.tavily.com/ 注册可获取免费额度）。
 """
 
 import os
 
 from dotenv import load_dotenv
 from deepagents import create_deep_agent
-from langchain_community.tools import DuckDuckGoSearchRun
+from langchain_tavily import TavilySearch
 from langchain_anthropic import ChatAnthropic
 
 load_dotenv(override=True)
@@ -19,10 +19,10 @@ model = ChatAnthropic(
     base_url=os.getenv("ANTHROPIC_BASE_URL") or None,
 )
 
-# DuckDuckGoSearchRun 是 langchain_community 提供的现成工具: 直接调用 DuckDuckGo 的
-# 搜索接口, 不需要申请任何 API key, 拿到的是真实的网络搜索结果 (不是模型编出来的)。
+# TavilySearch 是 langchain_tavily 提供的现成工具: 直接调用 Tavily 的搜索 API,
+# 需要 TAVILY_API_KEY, 拿到的是真实的网络搜索结果 (不是模型编出来的)。
 # 跟 get_weather 一样, 它之所以能被模型调用, 也是因为自带了描述信息 (工具名/参数/用途)。
-search = DuckDuckGoSearchRun()
+search = TavilySearch(max_results=5)
 
 # 这里没有额外传自定义工具, 只给了 search 一个工具, 但 create_deep_agent 仍然会自动
 # 附带 todo 规划工具 + 虚拟文件系统工具 (跟 ch_01_quickstart.py 一样), 只是这里的例子没有

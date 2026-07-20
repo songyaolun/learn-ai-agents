@@ -18,8 +18,7 @@ pytest>=8.0.0,<9.0              # 运行 ch_20_test_examples.py 的测试 runner
 python-dotenv>=1.2.0            # load_dotenv(override=True) 读取 .env
 
 # --- 多 Agent 联网搜索工具 (ch_12_multi_agent.py 用到) ---
-langchain-community>=0.3.0      # DuckDuckGoSearchRun 工具封装
-duckduckgo-search>=6.0.0        # DuckDuckGoSearchRun 的实际检索后端 (联网; 无网时该示例走替身)
+langchain-tavily>=0.2.18         # TavilySearch 工具封装, 需要 TAVILY_API_KEY
 
 # --- 数据校验 (结构化输出 schema) ---
 pydantic>=2.13.0,<3.0           # BaseModel/Field 定义结构化输出 schema

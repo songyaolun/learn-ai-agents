@@ -33,7 +33,7 @@ from dotenv import load_dotenv
 from deepagents import create_deep_agent
 from deepagents.backends import FilesystemBackend
 from langchain.agents.structured_output import ToolStrategy
-from langchain_community.tools import DuckDuckGoSearchRun
+from langchain_tavily import TavilySearch
 from langchain_anthropic import ChatAnthropic
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.types import Command
@@ -50,7 +50,7 @@ model = ChatAnthropic(
 scratch_dir = Path(tempfile.mkdtemp(prefix="deepagents_combo_demo_"))
 print(f"研究笔记的真实磁盘目录: {scratch_dir}")
 
-search = DuckDuckGoSearchRun()
+search = TavilySearch(max_results=5)
 
 
 def publish_report(markdown: str) -> str:

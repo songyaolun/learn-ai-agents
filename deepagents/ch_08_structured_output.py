@@ -27,7 +27,7 @@ import os
 from dotenv import load_dotenv
 from deepagents import create_deep_agent
 from langchain.agents.structured_output import ToolStrategy
-from langchain_community.tools import DuckDuckGoSearchRun
+from langchain_tavily import TavilySearch
 from langchain_anthropic import ChatAnthropic
 from pydantic import BaseModel, Field
 
@@ -48,7 +48,7 @@ class ResearchReport(BaseModel):
     sources: list[str] = Field(description="信息来源 URL 列表")
 
 
-search = DuckDuckGoSearchRun()
+search = TavilySearch(max_results=5)
 
 # 和 langchain/ch_08_structured_output.py 一样用 ToolStrategy(ResearchReport) 而不是
 # 直接传 ResearchReport 这个类——ToolStrategy 显式声明"通过工具调用产出结构化

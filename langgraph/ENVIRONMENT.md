@@ -17,7 +17,7 @@ source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-`requirements.txt` 覆盖了运行示例所需的全部第三方包(langgraph、langchain、langchain-anthropic、langchain-core、langchain-community、python-dotenv、langgraph-checkpoint-sqlite、pydantic、duckduckgo-search)。
+`requirements.txt` 覆盖了运行示例所需的全部第三方包(langgraph、langchain、langchain-anthropic、langchain-core、langchain-tavily、python-dotenv、langgraph-checkpoint-sqlite、pydantic)。
 
 说明:
 
@@ -42,6 +42,9 @@ ANTHROPIC_API_KEY=<你的API密钥占位符>
 
 # 可选: 若 B2 RAG 使用真实 embedding (voyageai) 才需要
 # VOYAGE_API_KEY=<你的embedding密钥占位符>
+
+# 仅 ch_12_multi_agent.py 需要: TavilySearch 联网搜索工具的 API key
+# TAVILY_API_KEY=<你的Tavily密钥占位符>
 ```
 
 代码里的统一读取方式(参见各示例):
@@ -70,7 +73,7 @@ model = ChatAnthropic(
 
 因此,你可以先不配 `.env` 直接运行 README/测试列出的 fallback-enabled 示例,观察每个 `=== ... ===` 分节的可判定输出;等配好密钥后再运行同一文件,即可换成真实模型响应。
 
-联网搜索工具(`DuckDuckGoSearchRun`,仅 ch_12_multi_agent.py 用到)在无网络时会失败,该示例的无密钥路径同样走替身,不依赖真实联网。
+联网搜索工具(`TavilySearch`,仅 ch_12_multi_agent.py 用到)需要 `TAVILY_API_KEY`,未配置或无网络时会失败,该示例的无密钥路径同样走替身,不依赖真实搜索结果。
 
 ## 5. 运行示例
 

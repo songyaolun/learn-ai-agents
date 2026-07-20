@@ -30,7 +30,7 @@ from langchain.agents import create_agent
 from langchain.agents.middleware import HumanInTheLoopMiddleware
 from langchain.messages import AIMessageChunk
 from langchain_anthropic import ChatAnthropic
-from langchain_community.tools import DuckDuckGoSearchRun
+from langchain_tavily import TavilySearch
 from langchain_core.messages import HumanMessage
 from langchain_core.tools import tool
 from langchain_core.vectorstores import InMemoryVectorStore
@@ -60,7 +60,7 @@ def _make_model() -> ChatAnthropic:
 # Profile 1: Deep Research —— 对应 deepagents/research.py
 # ============================================================
 def build_research_agent() -> object:
-    search = DuckDuckGoSearchRun()  # DuckDuckGo 搜索, 无需 API key
+    search = TavilySearch(max_results=5)  # Tavily 搜索, 需要 TAVILY_API_KEY
     return create_deep_agent(
         model=_make_model(),
         tools=[search],
@@ -224,7 +224,7 @@ def build_supervisor_graph() -> object:
     router_model = model.with_structured_output(_RouteDecision)
     researcher_agent = create_agent(
         model=model,
-        tools=[DuckDuckGoSearchRun()],
+        tools=[TavilySearch(max_results=5)],
         system_prompt="You are a researcher. Search and report concise, factual findings.",
     )
     writer_agent = create_agent(
@@ -358,7 +358,7 @@ async def handle_rag(message: cl.Message) -> None:
 # Chainlit 生命周期钩子: chat profile 选择 → 按 profile 分发
 # ============================================================
 _WELCOME = {
-    RESEARCH: "👋 我是 deep research agent, 接了 DuckDuckGo 真实搜索。问我任何需要查资料的问题吧。",
+    RESEARCH: "👋 我是 deep research agent, 接了 Tavily 真实搜索。问我任何需要查资料的问题吧。",
     HITL: (
         "👋 我可以查天气 (自动放行), 也可以帮你发邮件 (`send_email`, 需要你在弹窗里批准/修改/拒绝)。\n\n"
         "试试: '给 alice@example.com 发一封邮件, 说明天的会议改到周一'"
@@ -376,7 +376,7 @@ async def chat_profiles(current_user) -> list[cl.ChatProfile]:
     return [
         cl.ChatProfile(
             name=RESEARCH,
-            markdown_description="deepagents 的 deep research agent: 接 DuckDuckGo 搜索, 支持多轮记忆和图片输入。",
+            markdown_description="deepagents 的 deep research agent: 接 Tavily 搜索, 支持多轮记忆和图片输入。",
             default=True,
         ),
         cl.ChatProfile(

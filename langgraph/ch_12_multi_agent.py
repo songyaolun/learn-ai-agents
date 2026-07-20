@@ -18,7 +18,7 @@ from typing import Annotated, Literal, TypedDict
 from dotenv import load_dotenv
 from langchain.agents import create_agent
 from langchain_anthropic import ChatAnthropic
-from langchain_community.tools import DuckDuckGoSearchRun
+from langchain_tavily import TavilySearch
 from langchain_core.messages import HumanMessage
 from langgraph.graph import END, START, StateGraph, add_messages
 from langgraph.types import Command
@@ -74,7 +74,7 @@ def supervisor_node(state: State) -> Command[Literal["researcher", "writer", "__
 # -- researcher worker: 有搜索工具的完整 create_agent --
 researcher_agent = create_agent(
     model=model,
-    tools=[DuckDuckGoSearchRun()],
+    tools=[TavilySearch(max_results=5)],
     system_prompt="You are a researcher. Search and report concise, factual findings.",
 )
 
