@@ -77,12 +77,15 @@ if __name__ == "__main__":
     # pathlib 直接从磁盘上把文件读出来 —— 如果这里能读到内容, 就证明 write_file
     # 工具是真的写到了本机文件系统, 而不是像 ch_03_filesystem.py 里那样只存在于
     # LangGraph 的 state (graph 运行结束、进程退出后就查无此文件)。
-    notes_path = Path(scratch_dir) / "notes.md"
+    # 不硬编码 "notes.md": system_prompt 里的文件名只是建议, 不是对 write_file
+    # 工具参数的强约束, 模型实测会按内容自己起名 (比如写成
+    # python_decorators_notes.md), 所以改成遍历 scratch_dir 找所有 .md 文件。
     print("\n=== 用 pathlib 直接从磁盘读取 (证明是真实文件, 不是虚拟state) ===")
-    print(f"文件是否存在于磁盘: {notes_path.exists()}")
-    if notes_path.exists():
-        print("磁盘上的原始内容:")
-        print(notes_path.read_text(encoding="utf-8"))
+    md_files = sorted(Path(scratch_dir).glob("*.md"))
+    print(f"磁盘上发现的 .md 文件: {[f.name for f in md_files]}")
+    for md_file in md_files:
+        print(f"\n--- {md_file.name} ---")
+        print(md_file.read_text(encoding="utf-8"))
 
     # 顺手对照一下 result["files"] —— 实测发现它在这里是空字典, 跟
     # ch_03_filesystem.py 里默认的 StateBackend 不一样 (那边写完文件 result["files"]

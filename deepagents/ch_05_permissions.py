@@ -43,6 +43,7 @@ from deepagents import create_deep_agent
 from deepagents.backends import FilesystemBackend
 from deepagents.middleware.filesystem import FilesystemPermission
 from langchain_anthropic import ChatAnthropic
+
 # 下面两个 import 是给后半段 mode="interrupt" 演示用的: interrupt 需要 checkpointer
 # 保存"暂停时的完整状态", 并用 Command(resume=...) 恢复执行 (跟 ch_06_hitl.py 一模一样)。
 from langgraph.checkpoint.memory import InMemorySaver
@@ -50,17 +51,9 @@ from langgraph.types import Command
 
 load_dotenv(override=True)
 
-# MODEL_ID 存在才构造真实模型; 否则置为 None, 让"结构化断言"(不依赖模型) 依然能跑,
-# 只把"需要真实模型的场景"跳过。这样本文件在没有 API key 的机器上也能做基本自检。
-_HAS_MODEL = "MODEL_ID" in os.environ
-
-model = (
-    ChatAnthropic(
-        model=os.environ["MODEL_ID"],
-        base_url=os.getenv("ANTHROPIC_BASE_URL") or None,
-    )
-    if _HAS_MODEL
-    else None
+model = ChatAnthropic(
+    model=os.environ["MODEL_ID"],
+    base_url=os.getenv("ANTHROPIC_BASE_URL") or None,
 )
 
 scratch_dir = Path(tempfile.mkdtemp(prefix="deepagents_permissions_demo_"))
@@ -68,7 +61,9 @@ print(f"真实磁盘 root_dir: {scratch_dir}")
 
 # 预先放两类"敏感文件", 模拟一个真实项目里既有密钥、又有历史已发布产物的场景。
 (scratch_dir / "secrets").mkdir()
-(scratch_dir / "secrets" / "api_key.txt").write_text("SUPER-SECRET-KEY-12345", encoding="utf-8")
+(scratch_dir / "secrets" / "api_key.txt").write_text(
+    "SUPER-SECRET-KEY-12345", encoding="utf-8"
+)
 
 (scratch_dir / "published").mkdir()
 (scratch_dir / "published" / "report.md").write_text(
@@ -77,27 +72,21 @@ print(f"真实磁盘 root_dir: {scratch_dir}")
 
 backend = FilesystemBackend(root_dir=str(scratch_dir), virtual_mode=True)
 
-# 把 deny/allow 规则单独拎成一个模块级变量, 这样即使没有模型 (无法构造 agent),
-# 结构化断言依然能直接检查这些 FilesystemPermission 对象本身。
 deny_allow_permissions = [
     # /secrets/** 下的任何文件: 读和写都禁止, agent 连内容都看不到。
-    FilesystemPermission(operations=["read", "write"], paths=["/secrets/**"], mode="deny"),
+    FilesystemPermission(
+        operations=["read", "write"], paths=["/secrets/**"], mode="deny"
+    ),
     # /published/** 下的文件: 只禁止写 (不在 operations 里出现的 "read" 默认
     # 仍走 "allow" 分支), 相当于只读区——可以查阅历史报告, 但不能改写它们。
     FilesystemPermission(operations=["write"], paths=["/published/**"], mode="deny"),
 ]
 
-# 没有模型时 agent=None, 原始 deny/allow 演示会被 __main__ 里的 _HAS_MODEL 守卫跳过,
-# 但不影响本文件后半段的"结构化断言"照常运行。
-agent = (
-    create_deep_agent(
-        model=model,
-        backend=backend,
-        permissions=deny_allow_permissions,
-        system_prompt="You are a helpful assistant with filesystem access.",
-    )
-    if _HAS_MODEL
-    else None
+agent = create_deep_agent(
+    model=model,
+    backend=backend,
+    permissions=deny_allow_permissions,
+    system_prompt="You are a helpful assistant with filesystem access.",
 )
 
 
@@ -133,50 +122,33 @@ interrupt_permissions = [
 ]
 
 # 这个 agent 专门演示 interrupt 模式, 因此必须带 checkpointer (见上方踩坑记录)。
-interrupt_agent = (
-    create_deep_agent(
-        model=model,
-        backend=backend,
-        permissions=interrupt_permissions,
-        system_prompt="You are a helpful assistant with filesystem access.",
-        checkpointer=InMemorySaver(),
-    )
-    if _HAS_MODEL
-    else None
+interrupt_agent = create_deep_agent(
+    model=model,
+    backend=backend,
+    permissions=interrupt_permissions,
+    system_prompt="You are a helpful assistant with filesystem access.",
+    checkpointer=InMemorySaver(),
 )
 
 
 if __name__ == "__main__":
-    # ---------- 结构化断言: 不依赖模型, 任何机器上都会跑, 保证规则对象本身合法 ----------
-    # deny 规则: /secrets/** 读写全禁。
-    assert deny_allow_permissions[0].mode == "deny"
-    assert deny_allow_permissions[0].operations == ["read", "write"]
-    assert deny_allow_permissions[0].paths == ["/secrets/**"]
-    # 只读区规则: 只挡写。
-    assert deny_allow_permissions[1].mode == "deny"
-    assert deny_allow_permissions[1].operations == ["write"]
-    # interrupt 规则: 写到 /reports/** 时暂停等人工审批 (而非硬拒绝)。
-    assert interrupt_permissions[0].mode == "interrupt"
-    assert interrupt_permissions[0].operations == ["write"]
-    assert interrupt_permissions[0].paths == ["/reports/**"]
-    # paths 里的 glob 必须以 "/" 开头 (deepagents 的硬性约束)。
+    # ---------- 结构化断言: 不依赖模型, 任何机器上都会跑 ----------
+    # 唯一真正有意义的校验: paths 里的 glob 必须以 "/" 开头 (deepagents 的硬性
+    # 约束, 传相对路径会在运行时报错)。逐字段断言 mode/operations/paths 等于
+    # 上面刚写的字面量没有实际意义 (只是验证赋值本身), 故不再重复。
     for perm in deny_allow_permissions + interrupt_permissions:
         for p in perm.paths:
             assert p.startswith("/"), f"permission 路径必须以 / 开头: {p!r}"
     print("[结构化断言] deny/allow/interrupt 三种 mode 的 permission 对象均合法。\n")
 
-    if not _HAS_MODEL:
-        # 降级说明: 没有 MODEL_ID 就无法构造/运行 agent, 只做上面的结构自检。
-        print("(未检测到 MODEL_ID: 已完成不依赖模型的结构化断言; 以下需要真实模型的")
-        print(" 演示场景全部跳过。设置 MODEL_ID 后可看到 deny/interrupt 的真实行为。)")
-        shutil.rmtree(scratch_dir, ignore_errors=True)
-        raise SystemExit(0)
-
     print("=== 场景 1: 尝试读取完全禁止访问的 /secrets/api_key.txt ===")
     r1 = agent.invoke(
         {
             "messages": [
-                {"role": "user", "content": "读取 /secrets/api_key.txt 的内容并告诉我。"}
+                {
+                    "role": "user",
+                    "content": "读取 /secrets/api_key.txt 的内容并告诉我。",
+                }
             ]
         }
     )
@@ -231,7 +203,10 @@ if __name__ == "__main__":
     interrupt_agent.invoke(
         {
             "messages": [
-                {"role": "user", "content": "在 /reports/q3.md 里写一句 '第三季度报告'。"}
+                {
+                    "role": "user",
+                    "content": "在 /reports/q3.md 里写一句 '第三季度报告'。",
+                }
             ]
         },
         config=icfg,
@@ -249,7 +224,9 @@ if __name__ == "__main__":
         interrupt_agent.invoke(
             Command(resume={"decisions": [{"type": "approve"}]}), config=icfg
         )
-        print(f"[验证] approve 后 /reports/q3.md 是否落盘: {(scratch_dir / 'reports' / 'q3.md').exists()}")
+        print(
+            f"[验证] approve 后 /reports/q3.md 是否落盘: {(scratch_dir / 'reports' / 'q3.md').exists()}"
+        )
 
     shutil.rmtree(scratch_dir, ignore_errors=True)
     print(f"\n已清理临时目录: {scratch_dir}")
